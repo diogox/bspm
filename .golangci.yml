@@ -1,0 +1,18 @@
+linters-settings:
+  goimports:
+    # Separate internal packages from external
+    local-prefixes: github.com/diogox/bspm/internal
+
+linters:
+  # Enable extra linters besides the default ones
+  enable:
+    - goimports
+    - godot
+    - goconst
+    - gofumpt
+    - govet
+    - stylecheck
+    - unconvert
+    - unparam
+    - misspell
+    - whitespace
