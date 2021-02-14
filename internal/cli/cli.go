@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/diogox/bspc-go"
 	"github.com/urfave/cli/v2"
@@ -147,6 +149,9 @@ func runServerDaemon(logger *log.Logger) error {
 	//  Closing it, in the line above, will remove the file. But since I'm killing the process, it never gets to run that.
 	//  Also, unrelated, am I closing the socket in bspc-go when subscribing to events?
 
+	exitCh := make(chan os.Signal, 1)
+	signal.Notify(exitCh, os.Interrupt, syscall.SIGTERM)
+
 	for {
 		select {
 		case msg := <-msgCh: // TODO: Use a JSON struct as a message instead for versatility
@@ -167,6 +172,9 @@ func runServerDaemon(logger *log.Logger) error {
 			}
 		case err := <-errCh:
 			logger.Error("error while receiving ipc message from client", zap.Error(err))
+		case <-exitCh:
+			logger.Info("Stopping daemon")
+			return nil
 		}
 	}
 }
