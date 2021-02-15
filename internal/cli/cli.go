@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/diogox/bspc-go"
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
@@ -94,6 +95,7 @@ func New(logger *zap.Logger) app {
 						}
 
 						if err := c.Send(msg); err != nil {
+							color.Red("Failed: %v", err)
 							return fmt.Errorf("failed to communicate with manager: %v", err)
 						}
 
@@ -143,7 +145,8 @@ func runServerDaemon(logger *log.Logger) error {
 	msgCh, errCh := server.Listen()
 	defer server.Close()
 
-	logger.Info("Running daemon")
+	color.Blue("Daemon Running...")
+	logger.Info("daemon started")
 
 	// TODO: Either override existing socket file, or add a listener to close the server when the user uses Ctrl-C
 	//  Closing it, in the line above, will remove the file. But since I'm killing the process, it never gets to run that.
@@ -159,21 +162,26 @@ func runServerDaemon(logger *log.Logger) error {
 			case "monocle":
 				logger.Info("Toggling transparent monocle mode")
 				if err := monocle.ToggleCurrentDesktop(); err != nil {
+					color.Red("Failed to toggle transparent monocle mode")
 					logger.Error("failed to toggle transparent monocle mode", zap.Error(err))
 				}
 			case "next":
 				if err := monocle.FocusNextHiddenNode(); err != nil {
+					color.Red("Failed to focus next node in transparent monocle mode")
 					logger.Error("failed to focus next node in transparent monocle mode", zap.Error(err))
 				}
 			case "prev":
 				if err := monocle.FocusPreviousHiddenNode(); err != nil {
+					color.Red("Failed to focus previous node in transparent monocle mode")
 					logger.Error("failed to focus previous node in transparent monocle mode", zap.Error(err))
 				}
 			}
 		case err := <-errCh:
+			color.Red("Error: %v", err)
 			logger.Error("error while receiving ipc message from client", zap.Error(err))
 		case <-exitCh:
-			logger.Info("Stopping daemon")
+			color.Blue("Daemon Stopped!")
+			logger.Info("daemon stopped")
 			return nil
 		}
 	}
