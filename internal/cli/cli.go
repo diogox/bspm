@@ -148,9 +148,7 @@ func runServerDaemon(logger *log.Logger) error {
 	color.Blue("Daemon Running...")
 	logger.Info("daemon started")
 
-	// TODO: Either override existing socket file, or add a listener to close the server when the user uses Ctrl-C
-	//  Closing it, in the line above, will remove the file. But since I'm killing the process, it never gets to run that.
-	//  Also, unrelated, am I closing the socket in bspc-go when subscribing to events?
+	//  TODO: Unrelated, am I closing the socket in bspc-go when subscribing to events?
 
 	exitCh := make(chan os.Signal, 1)
 	signal.Notify(exitCh, os.Interrupt, syscall.SIGTERM)

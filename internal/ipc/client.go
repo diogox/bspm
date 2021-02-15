@@ -33,7 +33,7 @@ func NewClient() (Client, error) {
 }
 
 func (c client) Send(msg Message) error {
-	// TODO: Use monkey testing to unit test this?
+	// TODO: Use monkey patching to unit test this?
 	if _, err := c.conn.Write([]byte(msg)); err != nil {
 		return fmt.Errorf("failed to send message: %v", err)
 	}

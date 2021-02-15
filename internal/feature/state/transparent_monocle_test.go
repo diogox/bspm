@@ -2,13 +2,14 @@ package state_test
 
 import (
 	"errors"
-	"github.com/diogox/bspm/internal/feature/state"
 	"sync"
 	"testing"
 
 	"github.com/diogox/bspc-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/diogox/bspm/internal/feature/state"
 )
 
 func TestTransparentMonocle_Get(t *testing.T) {
@@ -78,7 +79,7 @@ func TestTransparentMonocle_Delete(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			st          = state.TransparentMonocleState{
+			st             = state.TransparentMonocleState{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}
