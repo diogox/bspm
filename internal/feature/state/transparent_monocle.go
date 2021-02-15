@@ -9,8 +9,6 @@ import (
 	"github.com/diogox/bspc-go"
 )
 
-// TODO: Add unit tests
-
 type (
 	TransparentMonocle interface {
 		Get(desktopID bspc.ID) (TransparentMonocleState, error)
