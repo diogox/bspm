@@ -1,7 +1,8 @@
-package state
+package state_test
 
 import (
 	"errors"
+	"github.com/diogox/bspm/internal/feature/state"
 	"sync"
 	"testing"
 
@@ -15,28 +16,28 @@ func TestTransparentMonocle_Get(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			state          = TransparentMonocleState{
+			st             = state.TransparentMonocleState{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}
 		)
 
 		sm := sync.Map{}
-		sm.Store(desktopID, state)
+		sm.Store(desktopID, st)
 
-		got, err := transparentMonocle{desktops: &sm}.Get(desktopID)
+		got, err := state.NewTransparentMonocle().WithMap(&sm).Get(desktopID)
 		require.NoError(t, err)
 
-		assert.Equal(t, state, got)
+		assert.Equal(t, st, got)
 	})
 	t.Run("should return error when", func(t *testing.T) {
 		t.Run("desktop id not found", func(t *testing.T) {
 			const nonExistentDesktopID = bspc.ID(1)
 
-			_, err := NewTransparentMonocle().Get(nonExistentDesktopID)
+			_, err := state.NewTransparentMonocle().Get(nonExistentDesktopID)
 			require.Error(t, err)
 
-			assert.True(t, errors.Is(err, ErrNotFound))
+			assert.True(t, errors.Is(err, state.ErrNotFound))
 		})
 		t.Run("saved state has invalid type", func(t *testing.T) {
 			const desktopID = bspc.ID(1)
@@ -44,7 +45,7 @@ func TestTransparentMonocle_Get(t *testing.T) {
 			sm := sync.Map{}
 			sm.Store(desktopID, "invalid type")
 
-			_, err := transparentMonocle{desktops: &sm}.Get(desktopID)
+			_, err := state.NewTransparentMonocle().WithMap(&sm).Get(desktopID)
 			require.Error(t, err)
 			assert.Contains(t, "invalid state type", err.Error())
 		})
@@ -56,19 +57,19 @@ func TestTransparentMonocle_Set(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			state          = TransparentMonocleState{
+			st             = state.TransparentMonocleState{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}
 		)
 
 		sm := sync.Map{}
-		transparentMonocle{desktops: &sm}.Set(desktopID, state)
+		state.NewTransparentMonocle().WithMap(&sm).Set(desktopID, st)
 
 		got, ok := sm.Load(desktopID)
 		require.True(t, ok)
 
-		assert.Equal(t, state, got)
+		assert.Equal(t, st, got)
 	})
 }
 
@@ -77,28 +78,28 @@ func TestTransparentMonocle_Delete(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			state          = TransparentMonocleState{
+			st          = state.TransparentMonocleState{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}
 		)
 
 		sm := sync.Map{}
-		sm.Store(desktopID, state)
+		sm.Store(desktopID, st)
 
-		got, err := transparentMonocle{desktops: &sm}.Delete(desktopID)
+		got, err := state.NewTransparentMonocle().WithMap(&sm).Delete(desktopID)
 		require.NoError(t, err)
 
-		assert.Equal(t, state, got)
+		assert.Equal(t, st, got)
 	})
 	t.Run("should return error when", func(t *testing.T) {
 		t.Run("desktop id not found", func(t *testing.T) {
 			const nonExistentDesktopID = bspc.ID(1)
 
-			_, err := NewTransparentMonocle().Delete(nonExistentDesktopID)
+			_, err := state.NewTransparentMonocle().Delete(nonExistentDesktopID)
 			require.Error(t, err)
 
-			assert.True(t, errors.Is(err, ErrNotFound))
+			assert.True(t, errors.Is(err, state.ErrNotFound))
 		})
 		t.Run("saved state has invalid type", func(t *testing.T) {
 			const desktopID = bspc.ID(1)
@@ -106,7 +107,7 @@ func TestTransparentMonocle_Delete(t *testing.T) {
 			sm := sync.Map{}
 			sm.Store(desktopID, "invalid type")
 
-			_, err := transparentMonocle{desktops: &sm}.Delete(desktopID)
+			_, err := state.NewTransparentMonocle().WithMap(&sm).Delete(desktopID)
 			require.Error(t, err)
 
 			assert.Contains(t, "invalid state type", err.Error())

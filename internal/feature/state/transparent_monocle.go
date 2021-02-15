@@ -26,7 +26,7 @@ type (
 	}
 )
 
-func NewTransparentMonocle() TransparentMonocle {
+func NewTransparentMonocle() transparentMonocle {
 	return transparentMonocle{
 		desktops: &sync.Map{},
 	}
