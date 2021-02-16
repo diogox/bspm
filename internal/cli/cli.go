@@ -3,17 +3,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/diogox/bspc-go"
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
-	"github.com/diogox/bspm/internal/feature"
-	"github.com/diogox/bspm/internal/feature/state"
 	"github.com/diogox/bspm/internal/ipc"
 	"github.com/diogox/bspm/internal/log"
 )
@@ -85,11 +79,11 @@ func New(logger *zap.Logger) app {
 						var msg ipc.Message
 						switch {
 						case isToggle:
-							msg = "monocle"
+							msg = DaemonCommandMonocleToggle
 						case isPrev:
-							msg = "prev"
+							msg = DaemonCommandMonoclePrevious
 						case isNext:
-							msg = "next"
+							msg = DaemonCommandMonocleNext
 						default:
 							return errors.New("unexpected error")
 						}
@@ -115,80 +109,11 @@ func New(logger *zap.Logger) app {
 						return fmt.Errorf("failed to initialize logger: %v", err)
 					}
 
-					return runServerDaemon(l)
+					return runDaemon(l)
 				}
 
 				return errors.New("invalid arguments")
 			},
 		},
 	}
-}
-
-func runServerDaemon(logger *log.Logger) error {
-	server, err := ipc.NewServer()
-	if err != nil {
-		return err
-	}
-
-	bspwmClient, err := bspc.New(logger.WithoutFields())
-	if err != nil {
-		return fmt.Errorf("failed to initialise bspwm client: %v", err)
-	}
-
-	monocle, _, err := feature.StartTransparentMonocle(logger, state.NewTransparentMonocle(), bspwmClient)
-	if err != nil {
-		return err
-	}
-
-	// TODO: Use cancel() function above to listen for Ctrl-C interruptions.
-
-	msgCh, errCh := server.Listen()
-	defer server.Close()
-
-	color.Blue("Daemon Running...")
-	logger.Info("daemon started")
-
-	//  TODO: Unrelated, am I closing the socket in bspc-go when subscribing to events?
-
-	exitCh := make(chan os.Signal, 1)
-	signal.Notify(exitCh, os.Interrupt, syscall.SIGTERM)
-
-	for {
-		select {
-		case msg := <-msgCh: // TODO: Use a JSON struct as a message instead for versatility
-			switch msg {
-			case "monocle":
-				logger.Info("Toggling transparent monocle mode")
-				if err := monocle.ToggleCurrentDesktop(); err != nil {
-					color.Red("Failed to toggle transparent monocle mode")
-					logger.Error("failed to toggle transparent monocle mode", zap.Error(err))
-				}
-			case "next":
-				if err := monocle.FocusNextHiddenNode(); err != nil {
-					color.Red("Failed to focus next node in transparent monocle mode")
-					logger.Error("failed to focus next node in transparent monocle mode", zap.Error(err))
-				}
-			case "prev":
-				if err := monocle.FocusPreviousHiddenNode(); err != nil {
-					color.Red("Failed to focus previous node in transparent monocle mode")
-					logger.Error("failed to focus previous node in transparent monocle mode", zap.Error(err))
-				}
-			}
-		case err := <-errCh:
-			color.Red("Error: %v", err)
-			logger.Error("error while receiving ipc message from client", zap.Error(err))
-		case <-exitCh:
-			color.Blue("Daemon Stopped!")
-			logger.Info("daemon stopped")
-			return nil
-		}
-	}
-}
-
-func (a app) Run() error {
-	if err := a.cli.Run(os.Args); err != nil {
-		return err
-	}
-
-	return nil
 }
