@@ -1,4 +1,4 @@
-# BSPM - The BSPWM Manager
+# BSPM - The BSPWM Manager ![CI Status](https://github.com/diogox/bspm/workflows/CI/badge.svg)
 
 `bspm` is a tool meant to patch some of `bspwm`'s shortcomings.
 
