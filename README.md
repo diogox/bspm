@@ -1,16 +1,77 @@
-# bspm
+# BSPM - The BSPWM Manager
 
-A bspwm manager.
+`bspm` is a tool meant to patch some of `bspwm`'s shortcomings.
 
-*TODO*:
-* Make this tool
-* Write unit tests
-* Improve github actions workflow? Am I using all the best build flags for a smaller binary? Move mock generation to CI and remove from repo?
-  Add Makefile?
-* Publish my nix package for this to the nixpkgs repo when finished.
-* Finish `bspc-go` library, tag it with `v1.0.0` and update the dependency here.
-* Fix a bug where, being in monocle mode, with hidden nodes, and restarting the wm (`bspc wm -r`), will cause the hidden nodes not to appear again when toggling the monocle mode off. (this is, however, fixed by running that command twice)
+Here are its features:
+* **Transparent Monocle Mode** - If you've used `bspwm`'s monocle mode with any sort of window transparency, 
+  you've probably noticed that you can see your other open windows in the background. This is not ideal. 
+  And so, `bspm` solves it! Just make sure to replace your existing hotkeys with the appropriate `bspm` commands, 
+  and you're good to go!
+  
+* **More Coming (Hopefully) Soon!**
 
-New Mode Ideas:
-* "swallow" functionality: defined by rules sent to this tool, like `bspc rule`. And there can even be a `bspm swallow --rec` to record what node with what features (name, for eg.) is supposed to be swallowed by what node.
-* "shadow". Basically you can bind a node to another, and when you run a command (or hit the hotkey that runs it), it switches between them. The use case for this is having, for example, a specific terminal window for each Goland instance. The "shadows" can never be seen, except for when you switch to it from its counterpart. We can even auto-shadows. Programs that run automatically when a condition is met in a detected new node (when I launch a Goland instance, it launches a terminal instance automatically in the background), and I can even have that instance open in the folder of the root path of whatever is open in Goland. This will require a "super-state" that all modes will need to coordinate with, to avoid having these shadows shown in "monocle-mode".
+## Usage
+
+First things first: To use `bspm`, you need to launch its daemon.
+
+Simply add this to your `bspwmrc` and you'll have it up and running at startup:
+```shell
+bspm -d &
+```
+
+### Transparent Monocle Mode
+
+All commands are prefixed with the subcommand `monocle`.
+
+Toggle this mode for the desktop you're currently on:
+```shell
+bspm monocle --toggle
+```
+
+Cycle to the next node:
+```shell
+bspm monocle --next
+```
+
+Cycle to the previous node:
+```shell
+bspm monocle --prev
+```
+
+That's it!
+
+**Here's a tip**: To be able to use `j` and `k` to cycle between nodes in this mode and still be able to use those keys 
+in `tiled` mode, you can use a script like this one:
+
+*Shell scripting isn't exactly my strong suit, (hence `bspm` being written in Go) so there might be a better way to write this script.*
+
+```shell
+#!/bin/bash
+current_layout=$(bspc query -T -d | jq -r .layout)
+   
+if [[ $current_layout == monocle ]]
+then
+  if [[ $@ == up ]]
+  then
+    bspm monocle --next
+  else
+    # We assume it's "down"
+    bspm monocle --prev
+  fi
+else
+  # Act normally
+  if [[ $@ == up ]]
+  then
+    bspc node -f north
+  else
+    # We assume it's "down"
+    bspc node -f south
+  fi
+fi
+```
+
+And then have something like this in your `sxhkdrc` file:
+```
+super + {j,k}
+  $PATH_TO_SCRIPT/script_name.sh {down,up}
+```
