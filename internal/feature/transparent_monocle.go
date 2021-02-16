@@ -33,7 +33,12 @@ func StartTransparentMonocle(
 	desktops state.TransparentMonocle,
 	client bspc.Client,
 ) (TransparentMonocle, func(), error) {
-	evCh, errCh, err := client.SubscribeEvents(bspc.EventTypeNodeAdd, bspc.EventTypeNodeRemove, bspc.EventTypeNodeTransfer)
+	evCh, errCh, err := client.SubscribeEvents(
+		bspc.EventTypeNodeAdd,
+		bspc.EventTypeNodeRemove,
+		bspc.EventTypeNodeTransfer,
+		bspc.EventTypeNodeSwap,
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to subscribe to events: %v", err)
 	}
@@ -127,6 +132,57 @@ func StartTransparentMonocle(
 							zap.Error(err),
 						)
 					}
+
+				case bspc.EventTypeNodeSwap:
+					// TODO: Add unit tests for this event
+					payload, ok := ev.Payload.(bspc.EventNodeSwap)
+					if !ok {
+						logger.Error("failed to type cast event into specified event type",
+							zap.String("event_type", string(bspc.EventTypeNodeTransfer)),
+							zap.Any("event_payload", ev.Payload),
+						)
+						continue
+					}
+
+					if payload.SourceDesktopID == payload.DestinationDesktopID {
+						// TODO: Is this even possible?
+						// It's not going to affect this mode. Move on.
+						continue
+					}
+
+					go func() {
+						if err := handleNodeRemoved(logger, client, desktops, payload.SourceDesktopID, payload.SourceNodeID); err != nil {
+							logger.Error("failed to handle node swap (across desktops) source node removal at source desktop",
+								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+								zap.Uint("node_id", uint(payload.SourceNodeID)),
+								zap.Error(err),
+							)
+						}
+						if err := handleNodeAdded(logger, client, desktops, payload.SourceDesktopID, payload.DestinationNodeID); err != nil {
+							logger.Error("failed to handle node swap (across desktops) destination node added at source desktop",
+								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+								zap.Uint("node_id", uint(payload.DestinationNodeID)),
+								zap.Error(err),
+							)
+						}
+					}()
+
+					go func() {
+						if err := handleNodeRemoved(logger, client, desktops, payload.DestinationDesktopID, payload.DestinationNodeID); err != nil {
+							logger.Error("failed to handle node swap (across desktops) destination node added at destination desktop",
+								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+								zap.Uint("node_id", uint(payload.DestinationNodeID)),
+								zap.Error(err),
+							)
+						}
+						if err := handleNodeAdded(logger, client, desktops, payload.DestinationDesktopID, payload.SourceNodeID); err != nil {
+							logger.Error("failed to handle node swap (across desktops) source node added at destination desktop",
+								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+								zap.Uint("node_id", uint(payload.SourceNodeID)),
+								zap.Error(err),
+							)
+						}
+					}()
 				}
 			}
 		}
