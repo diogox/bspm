@@ -33,7 +33,7 @@ func StartTransparentMonocle(
 	desktops state.TransparentMonocle,
 	client bspc.Client,
 ) (TransparentMonocle, func(), error) {
-	evCh, errCh, err := client.SubscribeEvents(bspc.EventTypeNodeAdd, bspc.EventTypeNodeRemove)
+	evCh, errCh, err := client.SubscribeEvents(bspc.EventTypeNodeAdd, bspc.EventTypeNodeRemove, bspc.EventTypeNodeTransfer)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to subscribe to events: %v", err)
 	}
@@ -71,49 +71,14 @@ func StartTransparentMonocle(
 						continue
 					}
 
-					var addedNode bspc.Node
-					if err := client.Query(fmt.Sprintf("query -n %d -T", payload.NodeID), bspc.ToStruct(&addedNode)); err != nil {
-						logger.Error("failed to retrieve info on added node",
-							zap.Uint("node_id", uint(payload.NodeID)),
+					if err := handleNodeAdded(logger, client, desktops, payload.DesktopID, payload.NodeID); err != nil {
+						logger.Error("failed to handle added node",
+							zap.Uint("desktop_id", uint(payload.DesktopID)),
 							zap.Error(err),
 						)
 						continue
 					}
 
-					if addedNode.Client.State == bspc.StateTypeFloating {
-						// It's a floating window. Ignore it
-						continue
-					}
-
-					st, err := desktops.Get(payload.DesktopID)
-					if err != nil {
-						if !errors.Is(err, state.ErrNotFound) {
-							logger.Error("failed to get desktop state",
-								zap.Uint("desktop_id", uint(payload.DesktopID)),
-								zap.Error(err),
-							)
-						}
-
-						continue
-					}
-
-					newHiddenNodeIDs := st.HiddenNodeIDs
-					if st.SelectedNodeID != nil {
-						if err := client.Query(fmt.Sprintf("node %d --flag hidden=on", *st.SelectedNodeID), nil); err != nil {
-							logger.Error("failed to hide previously focused node",
-								zap.Uint("node_id", uint(*st.SelectedNodeID)),
-								zap.Error(err),
-							)
-							continue
-						}
-
-						newHiddenNodeIDs = append(newHiddenNodeIDs, *st.SelectedNodeID)
-					}
-
-					desktops.Set(payload.DesktopID, state.TransparentMonocleState{
-						SelectedNodeID: &payload.NodeID,
-						HiddenNodeIDs:  newHiddenNodeIDs,
-					})
 				case bspc.EventTypeNodeRemove:
 					payload, ok := ev.Payload.(bspc.EventNodeRemove)
 					if !ok {
@@ -123,51 +88,45 @@ func StartTransparentMonocle(
 						)
 					}
 
-					st, err := desktops.Get(payload.DesktopID)
+					err := handleNodeRemoved(logger, client, desktops, payload.DesktopID, payload.NodeID)
 					if err != nil {
-						if !errors.Is(err, state.ErrNotFound) {
-							logger.Error("failed to get desktop state",
-								zap.Uint("desktop_id", uint(payload.DesktopID)),
-								zap.Error(err),
-							)
-						}
-
-						continue
-					}
-
-					if st.SelectedNodeID == nil || *st.SelectedNodeID != payload.NodeID {
-						logger.Info("Ignoring non-selected node removal",
+						logger.Error("failed to handle removed node",
 							zap.Uint("desktop_id", uint(payload.DesktopID)),
 							zap.Error(err),
 						)
+					}
 
-						// It was most likely a floating window. Ignore it.
+				case bspc.EventTypeNodeTransfer:
+					// TODO: Add unit tests for this event
+					payload, ok := ev.Payload.(bspc.EventNodeTransfer)
+					if !ok {
+						logger.Error("failed to type cast event into specified event type",
+							zap.String("event_type", string(bspc.EventTypeNodeTransfer)),
+							zap.Any("event_payload", ev.Payload),
+						)
 						continue
 					}
 
-					var (
-						newSelectedNodeID *bspc.ID
-						newHiddenNodeIDs  []bspc.ID
-					)
+					// The source node id is the id of the node being transferred.
+					// It's unclear what the destination node id is.
+					// I think it's the id of the node whose position we're going to replace with this one.
+					// TODO: Add a godoc to bspc-go to make this clear both for NodeTransfer and NodeSwap events.
+					//  I'm assuming it's the same for the latter event type.
+					transferredNodeID := payload.SourceNodeID
 
-					if len(st.HiddenNodeIDs) != 0 {
-						newSelectedNodeID = &st.HiddenNodeIDs[len(st.HiddenNodeIDs)-1]
-
-						if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", *newSelectedNodeID), nil); err != nil {
-							logger.Error("failed to show newly focused node",
-								zap.Uint("node_id", uint(*st.SelectedNodeID)),
-								zap.Error(err),
-							)
-							continue
-						}
-
-						newHiddenNodeIDs = removeFromSlice(st.HiddenNodeIDs, *newSelectedNodeID)
+					if err := handleNodeRemoved(logger, client, desktops, payload.SourceDesktopID, transferredNodeID); err != nil {
+						logger.Error("failed to handle node transfers at source",
+							zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+							zap.Error(err),
+						)
 					}
 
-					desktops.Set(payload.DesktopID, state.TransparentMonocleState{
-						SelectedNodeID: newSelectedNodeID,
-						HiddenNodeIDs:  newHiddenNodeIDs,
-					})
+					if err := handleNodeAdded(logger, client, desktops, payload.DestinationDesktopID, transferredNodeID); err != nil {
+						logger.Error("failed to handle node transfer at destination",
+							zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+							zap.Error(err),
+						)
+					}
 				}
 			}
 		}
@@ -180,6 +139,103 @@ func StartTransparentMonocle(
 		bspcClient: client,
 		desktops:   desktops,
 	}, cancelFunc, nil
+}
+
+func handleNodeRemoved(
+	logger *log.Logger,
+	client bspc.Client,
+	desktops state.TransparentMonocle,
+	desktopID bspc.ID,
+	nodeID bspc.ID,
+) error {
+	st, err := desktops.Get(desktopID)
+	if err != nil {
+		if !errors.Is(err, state.ErrNotFound) {
+			return fmt.Errorf("failed to get desktop state: %w", err)
+		}
+
+		return nil
+	}
+
+	if st.SelectedNodeID == nil || *st.SelectedNodeID != nodeID {
+		logger.Info("Ignoring non-selected node removal",
+			zap.Uint("desktop_id", uint(desktopID)),
+			zap.Uint("node_id", uint(nodeID)),
+		)
+
+		// It was most likely a floating window. Ignore it.
+		return nil
+	}
+
+	var (
+		newSelectedNodeID *bspc.ID
+		newHiddenNodeIDs  []bspc.ID
+	)
+
+	if len(st.HiddenNodeIDs) != 0 {
+		newSelectedNodeID = &st.HiddenNodeIDs[len(st.HiddenNodeIDs)-1]
+
+		if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", *newSelectedNodeID), nil); err != nil {
+			return fmt.Errorf("failed to show newly focused node: %w", err)
+		}
+
+		newHiddenNodeIDs = removeFromSlice(st.HiddenNodeIDs, *newSelectedNodeID)
+	}
+
+	desktops.Set(desktopID, state.TransparentMonocleState{
+		SelectedNodeID: newSelectedNodeID,
+		HiddenNodeIDs:  newHiddenNodeIDs,
+	})
+
+	return nil
+}
+
+func handleNodeAdded(
+	logger *log.Logger,
+	client bspc.Client,
+	desktops state.TransparentMonocle,
+	desktopID bspc.ID,
+	nodeID bspc.ID,
+) error {
+	var addedNode bspc.Node
+	if err := client.Query(fmt.Sprintf("query -n %d -T", nodeID), bspc.ToStruct(&addedNode)); err != nil {
+		return fmt.Errorf("failed to retrieve info on added node: %w", err)
+	}
+
+	if addedNode.Client.State == bspc.StateTypeFloating {
+		logger.Info("Ignoring non-selected node removal",
+			zap.Uint("desktop_id", uint(desktopID)),
+			zap.Uint("node_id", uint(nodeID)),
+		)
+
+		// It's a floating window. Ignore it
+		return nil
+	}
+
+	st, err := desktops.Get(desktopID)
+	if err != nil {
+		if !errors.Is(err, state.ErrNotFound) {
+			return fmt.Errorf("failed to get desktop state: %w", err)
+		}
+
+		return nil
+	}
+
+	newHiddenNodeIDs := st.HiddenNodeIDs
+	if st.SelectedNodeID != nil {
+		if err := client.Query(fmt.Sprintf("node %d --flag hidden=on", *st.SelectedNodeID), nil); err != nil {
+			return fmt.Errorf("failed to hide previously focused node: %w", err)
+		}
+
+		newHiddenNodeIDs = append(newHiddenNodeIDs, *st.SelectedNodeID)
+	}
+
+	desktops.Set(desktopID, state.TransparentMonocleState{
+		SelectedNodeID: &nodeID,
+		HiddenNodeIDs:  newHiddenNodeIDs,
+	})
+
+	return nil
 }
 
 func (tm transparentMonocle) ToggleCurrentDesktop() error {
