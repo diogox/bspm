@@ -5,6 +5,32 @@ import (
 	"net"
 )
 
+var (
+	initConn = func() (*net.UnixConn, error) {
+		addr, err := net.ResolveUnixAddr("unixgram", serverUnixSocket)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve unix address: %v", err)
+		}
+
+		conn, err := net.DialUnix("unix", nil, addr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to socket: %v", err)
+		}
+
+		return conn, nil
+	}
+	writeConn = func(conn *net.UnixConn, msg Message) error {
+		if _, err := conn.Write([]byte(msg)); err != nil {
+			return err
+		}
+
+		return nil
+	}
+	closeConn = func(conn *net.UnixConn) error {
+		return conn.Close()
+	}
+)
+
 type (
 	Client interface {
 		Send(msg Message) error
@@ -17,14 +43,9 @@ type (
 )
 
 func NewClient() (Client, error) {
-	addr, err := net.ResolveUnixAddr("unixgram", serverUnixSocket)
+	conn, err := initConn()
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve unix address: %v", err)
-	}
-
-	conn, err := net.DialUnix("unix", nil, addr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to socket: %v", err)
+		return nil, err
 	}
 
 	return client{
@@ -33,14 +54,13 @@ func NewClient() (Client, error) {
 }
 
 func (c client) Send(msg Message) error {
-	// TODO: Use monkey patching to unit test this?
-	if _, err := c.conn.Write([]byte(msg)); err != nil {
-		return fmt.Errorf("failed to send message: %v", err)
+	if err := writeConn(c.conn, msg); err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
 	}
 
 	return nil
 }
 
 func (c client) Close() error {
-	return c.conn.Close()
+	return closeConn(c.conn)
 }
