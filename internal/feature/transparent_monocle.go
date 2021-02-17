@@ -112,6 +112,8 @@ func StartTransparentMonocle(
 						continue
 					}
 
+					// TODO: I probably need to check for non-leaf nodes here. Like I did for Swaps below. Test it.
+
 					// The source node id is the id of the node being transferred.
 					// It's unclear what the destination node id is.
 					// I think it's the id of the node whose position we're going to replace with this one.
@@ -150,39 +152,120 @@ func StartTransparentMonocle(
 						continue
 					}
 
-					go func() {
-						if err := handleNodeRemoved(logger, client, desktops, payload.SourceDesktopID, payload.SourceNodeID); err != nil {
-							logger.Error("failed to handle node swap (across desktops) source node removal at source desktop",
-								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
-								zap.Uint("node_id", uint(payload.SourceNodeID)),
-								zap.Error(err),
-							)
-						}
-						if err := handleNodeAdded(logger, client, desktops, payload.SourceDesktopID, payload.DestinationNodeID); err != nil {
-							logger.Error("failed to handle node swap (across desktops) destination node added at source desktop",
-								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
-								zap.Uint("node_id", uint(payload.DestinationNodeID)),
-								zap.Error(err),
-							)
-						}
-					}()
+					// TODO: Use this strategy in the other log instances.
+					loggerOpts := []zap.Field{
+						zap.Uint("source_desktop_id", uint(payload.SourceDesktopID)),
+						zap.Uint("destination_desktop_id", uint(payload.DestinationDesktopID)),
+						zap.Uint("source_node_id", uint(payload.SourceNodeID)),
+						zap.Uint("destination_node_id", uint(payload.DestinationNodeID)),
+					}
 
-					go func() {
-						if err := handleNodeRemoved(logger, client, desktops, payload.DestinationDesktopID, payload.DestinationNodeID); err != nil {
+					isSourceDesktopMonocled := true
+					if _, err := desktops.Get(payload.SourceDesktopID); err != nil {
+						if !errors.Is(err, state.ErrNotFound) {
+							logger.Error("failed to get source desktop state", append(loggerOpts, zap.Error(err))...)
+							continue
+						}
+
+						isSourceDesktopMonocled = false
+					}
+
+					isDestinationDesktopMonocled := true
+					if _, err := desktops.Get(payload.DestinationDesktopID); err != nil {
+						if !errors.Is(err, state.ErrNotFound) {
+							logger.Error("failed to get destination desktop state", append(loggerOpts, zap.Error(err))...)
+							continue
+						}
+
+						isDestinationDesktopMonocled = false
+					}
+
+					if !isSourceDesktopMonocled && !isDestinationDesktopMonocled {
+						// None of them are in monocle mode. Ignore.
+						continue
+					}
+
+					// TODO: Move these bspc calls to a service layer so they can be reused more idiomatically.
+					// TODO: This gets called in handleNodeAdded. Is there a way I can reuse this there?
+					var sourceNode bspc.Node
+					if err := client.Query(fmt.Sprintf("query -n %d -T", payload.SourceNodeID), bspc.ToStruct(&sourceNode)); err != nil {
+						logger.Error("failed to query source node info", append(loggerOpts, zap.Error(err))...)
+						continue
+					}
+
+					var destinationNode bspc.Node
+					if err := client.Query(fmt.Sprintf("query -n %d -T", payload.DestinationNodeID), bspc.ToStruct(&destinationNode)); err != nil {
+						logger.Error("failed to query destination node info", append(loggerOpts, zap.Error(err))...)
+						continue
+					}
+
+					// TODO: This is probably not the best type. I'd need to change the `getVisibleLeafNodes` function to return a slice instead.
+					sourceNodes := map[bspc.ID]bspc.Node{sourceNode.ID: sourceNode}
+					if !isLeafNode(sourceNode) {
+						sourceNodes = getVisibleLeafNodes(sourceNode)
+					}
+
+					destinationNodes := map[bspc.ID]bspc.Node{destinationNode.ID: destinationNode}
+					if !isLeafNode(destinationNode) {
+						destinationNodes = getVisibleLeafNodes(destinationNode)
+					}
+
+					for _, n := range sourceNodes {
+						// We can't add hidden nodes to a desktop
+						if n.Hidden {
+							if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", n.ID), nil); err != nil {
+								logger.Error("failed to show hidden node being swapped",
+									append(loggerOpts, zap.Error(err))...,
+								)
+								continue
+							}
+						}
+					}
+
+					for _, n := range destinationNodes {
+						// We can't add hidden nodes to a desktop
+						if n.Hidden {
+							if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", n.ID), nil); err != nil {
+								logger.Error("failed to show hidden node being swapped",
+									append(loggerOpts, zap.Error(err))...,
+								)
+								continue
+							}
+						}
+					}
+
+					// TODO: we can't know what node was focused atm. So the newly focused node (the one called last below) is
+					//  going to be random for now. Refactor this when I add an internal representation of bspwm's state.
+
+					for id := range sourceNodes {
+						if err := handleNodeRemoved(logger, client, desktops, payload.SourceDesktopID, id); err != nil {
+							logger.Error("failed to handle node swap (across desktops) source node removal at source desktop",
+								append(loggerOpts, zap.Error(err))...,
+							)
+						}
+					}
+					for id := range destinationNodes {
+						if err := handleNodeRemoved(logger, client, desktops, payload.DestinationDesktopID, id); err != nil {
 							logger.Error("failed to handle node swap (across desktops) destination node added at destination desktop",
-								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
-								zap.Uint("node_id", uint(payload.DestinationNodeID)),
-								zap.Error(err),
+								append(loggerOpts, zap.Error(err))...,
 							)
 						}
-						if err := handleNodeAdded(logger, client, desktops, payload.DestinationDesktopID, payload.SourceNodeID); err != nil {
+					}
+
+					for id := range sourceNodes {
+						if err := handleNodeAdded(logger, client, desktops, payload.DestinationDesktopID, id); err != nil {
 							logger.Error("failed to handle node swap (across desktops) source node added at destination desktop",
-								zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
-								zap.Uint("node_id", uint(payload.SourceNodeID)),
-								zap.Error(err),
+								append(loggerOpts, zap.Error(err))...,
 							)
 						}
-					}()
+					}
+					for id := range destinationNodes {
+						if err := handleNodeAdded(logger, client, desktops, payload.SourceDesktopID, id); err != nil {
+							logger.Error("failed to handle node swap (across desktops) destination node added at source desktop",
+								append(loggerOpts, zap.Error(err))...,
+							)
+						}
+					}
 				}
 			}
 		}
@@ -214,7 +297,28 @@ func handleNodeRemoved(
 	}
 
 	if st.SelectedNodeID == nil || *st.SelectedNodeID != nodeID {
-		logger.Info("Ignoring non-selected node removal",
+		var isHiddenNode bool
+		for _, hiddenID := range st.HiddenNodeIDs {
+			if nodeID == hiddenID {
+				isHiddenNode = true
+				break
+			}
+		}
+
+		if isHiddenNode {
+			desktops.Set(desktopID, state.TransparentMonocleState{
+				SelectedNodeID: st.SelectedNodeID,
+				HiddenNodeIDs:  removeFromSlice(st.HiddenNodeIDs, nodeID),
+			})
+
+			logger.Info("Ignoring hidden node removal",
+				zap.Uint("desktop_id", uint(desktopID)),
+				zap.Uint("node_id", uint(nodeID)),
+			)
+			return nil
+		}
+
+		logger.Info("Ignoring floating node removal",
 			zap.Uint("desktop_id", uint(desktopID)),
 			zap.Uint("node_id", uint(nodeID)),
 		)
@@ -471,7 +575,7 @@ func removeFromSlice(slice []bspc.ID, toRemove bspc.ID) []bspc.ID {
 func getVisibleLeafNodes(node bspc.Node) map[bspc.ID]bspc.Node {
 	nodes := make(map[bspc.ID]bspc.Node)
 
-	if node.FirstChild == nil && node.SecondChild == nil {
+	if isLeafNode(node) {
 		nodes[node.ID] = node
 	}
 
@@ -488,4 +592,9 @@ func getVisibleLeafNodes(node bspc.Node) map[bspc.ID]bspc.Node {
 	}
 
 	return nodes
+}
+
+// TODO: Add this as a method to nodes in bspc-go?
+func isLeafNode(node bspc.Node) bool {
+	return node.FirstChild == nil && node.SecondChild == nil
 }
