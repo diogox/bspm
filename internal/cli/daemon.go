@@ -10,6 +10,10 @@ import (
 	"github.com/fatih/color"
 	"go.uber.org/zap"
 
+	"github.com/diogox/bspm/internal/bspwm"
+	bspwmdesktop "github.com/diogox/bspm/internal/bspwm/desktop"
+	bspwmevent "github.com/diogox/bspm/internal/bspwm/event"
+	bspwmnode "github.com/diogox/bspm/internal/bspwm/node"
 	"github.com/diogox/bspm/internal/feature"
 	"github.com/diogox/bspm/internal/feature/state"
 	"github.com/diogox/bspm/internal/ipc"
@@ -33,7 +37,15 @@ func runDaemon(logger *log.Logger) error {
 		return fmt.Errorf("failed to initialise bspwm client: %v", err)
 	}
 
-	monocle, cancel, err := feature.StartTransparentMonocle(logger, state.NewTransparentMonocle(), bspwmClient)
+	monocle, cancel, err := feature.StartTransparentMonocle(
+		logger,
+		state.NewTransparentMonocle(),
+		bspwm.NewService(
+			bspwmdesktop.NewService(bspwmClient),
+			bspwmnode.NewService(bspwmClient),
+			bspwmevent.NewManager(logger, bspwmClient),
+		),
+	)
 	if err != nil {
 		return err
 	}

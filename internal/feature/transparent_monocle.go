@@ -10,6 +10,9 @@ import (
 	"github.com/diogox/bspc-go"
 	"go.uber.org/zap"
 
+	"github.com/diogox/bspm/internal/bspwm"
+	"github.com/diogox/bspm/internal/bspwm/filter"
+
 	"github.com/diogox/bspm/internal/feature/state"
 	"github.com/diogox/bspm/internal/log"
 )
@@ -22,267 +25,249 @@ type (
 	}
 
 	transparentMonocle struct {
-		logger     *log.Logger
-		bspcClient bspc.Client
-		desktops   state.TransparentMonocle
+		logger   *log.Logger
+		service  bspwm.Service
+		desktops state.TransparentMonocle
 	}
 )
 
 func StartTransparentMonocle(
 	logger *log.Logger,
 	desktops state.TransparentMonocle,
-	client bspc.Client,
+	service bspwm.Service,
 ) (TransparentMonocle, func(), error) {
-	evCh, errCh, err := client.SubscribeEvents(
-		bspc.EventTypeNodeAdd,
-		bspc.EventTypeNodeRemove,
-		bspc.EventTypeNodeTransfer,
-		bspc.EventTypeNodeSwap,
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to subscribe to events: %v", err)
-	}
+	service.Events().On(bspc.EventTypeNodeAdd, func(eventPayload interface{}) error {
+		payload, ok := eventPayload.(bspc.EventNodeAdd)
+		if !ok {
+			return errors.New("invalid event payload")
+		}
 
-	cancelCh := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-cancelCh:
-				logger.Info("closing transparent monocle events subscription")
-				return
+		if err := handleNodeAdded(logger, service, desktops, payload.DesktopID, payload.NodeID); err != nil {
+			logger.Error("failed to handle added node",
+				zap.Uint("desktop_id", uint(payload.DesktopID)),
+				zap.Error(err),
+			)
 
-			case err, ok := <-errCh:
-				if !ok {
-					logger.Error("error channel closed unexpectedly", zap.Error(err))
-					return
-				}
+			return err
+		}
 
-				logger.Error("error received from transparent monocle events subscription", zap.Error(err))
+		return nil
+	})
 
-			case ev, ok := <-evCh:
-				if !ok {
-					logger.Error("event channel closed unexpectedly", zap.Error(err))
-					return
-				}
+	service.Events().On(bspc.EventTypeNodeRemove, func(eventPayload interface{}) error {
+		payload, ok := eventPayload.(bspc.EventNodeRemove)
+		if !ok {
+			return errors.New("invalid event payload")
+		}
 
-				switch ev.Type {
-				case bspc.EventTypeNodeAdd:
-					payload, ok := ev.Payload.(bspc.EventNodeAdd)
-					if !ok {
-						logger.Error("failed to type cast event into specified event type",
-							zap.String("event_type", string(bspc.EventTypeNodeAdd)),
-							zap.Any("event_payload", ev.Payload),
-						)
-						continue
-					}
+		err := handleNodeRemoved(logger, service, desktops, payload.DesktopID, payload.NodeID)
+		if err != nil {
+			logger.Error("failed to handle removed node",
+				zap.Uint("desktop_id", uint(payload.DesktopID)),
+				zap.Error(err),
+			)
 
-					if err := handleNodeAdded(logger, client, desktops, payload.DesktopID, payload.NodeID); err != nil {
-						logger.Error("failed to handle added node",
-							zap.Uint("desktop_id", uint(payload.DesktopID)),
-							zap.Error(err),
-						)
-						continue
-					}
+			return err
+		}
 
-				case bspc.EventTypeNodeRemove:
-					payload, ok := ev.Payload.(bspc.EventNodeRemove)
-					if !ok {
-						logger.Error("failed to type cast event into specified event type",
-							zap.String("event_type", string(bspc.EventTypeNodeRemove)),
-							zap.Any("event_payload", ev.Payload),
-						)
-					}
+		return nil
+	})
 
-					err := handleNodeRemoved(logger, client, desktops, payload.DesktopID, payload.NodeID)
-					if err != nil {
-						logger.Error("failed to handle removed node",
-							zap.Uint("desktop_id", uint(payload.DesktopID)),
-							zap.Error(err),
-						)
-					}
+	service.Events().On(bspc.EventTypeNodeTransfer, func(eventPayload interface{}) error {
+		// TODO: Add unit tests for this event
+		payload, ok := eventPayload.(bspc.EventNodeTransfer)
+		if !ok {
+			return errors.New("invalid event payload")
+		}
 
-				case bspc.EventTypeNodeTransfer:
-					// TODO: Add unit tests for this event
-					payload, ok := ev.Payload.(bspc.EventNodeTransfer)
-					if !ok {
-						logger.Error("failed to type cast event into specified event type",
-							zap.String("event_type", string(bspc.EventTypeNodeTransfer)),
-							zap.Any("event_payload", ev.Payload),
-						)
-						continue
-					}
+		// TODO: I probably need to check for non-leaf nodes here. Like I did for Swaps below. Test it.
 
-					// TODO: I probably need to check for non-leaf nodes here. Like I did for Swaps below. Test it.
+		// The source node id is the id of the node being transferred.
+		// It's unclear what the destination node id is.
+		// I think it's the id of the node whose position we're going to replace with this one.
+		// TODO: Add a godoc to bspc-go to make this clear both for NodeTransfer and NodeSwap events.
+		//  I'm assuming it's the same for the latter event type.
+		transferredNodeID := payload.SourceNodeID
 
-					// The source node id is the id of the node being transferred.
-					// It's unclear what the destination node id is.
-					// I think it's the id of the node whose position we're going to replace with this one.
-					// TODO: Add a godoc to bspc-go to make this clear both for NodeTransfer and NodeSwap events.
-					//  I'm assuming it's the same for the latter event type.
-					transferredNodeID := payload.SourceNodeID
+		if err := handleNodeRemoved(logger, service, desktops, payload.SourceDesktopID, transferredNodeID); err != nil {
+			logger.Error("failed to handle node transfers at source",
+				zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+				zap.Error(err),
+			)
 
-					if err := handleNodeRemoved(logger, client, desktops, payload.SourceDesktopID, transferredNodeID); err != nil {
-						logger.Error("failed to handle node transfers at source",
-							zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
-							zap.Error(err),
-						)
-					}
+			return err
+		}
 
-					if err := handleNodeAdded(logger, client, desktops, payload.DestinationDesktopID, transferredNodeID); err != nil {
-						logger.Error("failed to handle node transfer at destination",
-							zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
-							zap.Error(err),
-						)
-					}
+		if err := handleNodeAdded(logger, service, desktops, payload.DestinationDesktopID, transferredNodeID); err != nil {
+			logger.Error("failed to handle node transfer at destination",
+				zap.Uint("desktop_id", uint(payload.SourceDesktopID)),
+				zap.Error(err),
+			)
 
-				case bspc.EventTypeNodeSwap:
-					// TODO: Add unit tests for this event
-					payload, ok := ev.Payload.(bspc.EventNodeSwap)
-					if !ok {
-						logger.Error("failed to type cast event into specified event type",
-							zap.String("event_type", string(bspc.EventTypeNodeTransfer)),
-							zap.Any("event_payload", ev.Payload),
-						)
-						continue
-					}
+			return err
+		}
 
-					if payload.SourceDesktopID == payload.DestinationDesktopID {
-						// TODO: Is this even possible?
-						// It's not going to affect this mode. Move on.
-						continue
-					}
+		return nil
+	})
 
-					// TODO: Use this strategy in the other log instances.
-					loggerOpts := []zap.Field{
-						zap.Uint("source_desktop_id", uint(payload.SourceDesktopID)),
-						zap.Uint("destination_desktop_id", uint(payload.DestinationDesktopID)),
-						zap.Uint("source_node_id", uint(payload.SourceNodeID)),
-						zap.Uint("destination_node_id", uint(payload.DestinationNodeID)),
-					}
+	service.Events().On(bspc.EventTypeNodeSwap, func(eventPayload interface{}) error {
+		// TODO: this one is HUGE. Need to move this to a private method, or a function.
+		// TODO: Add unit tests for this event
 
-					isSourceDesktopMonocled := true
-					if _, err := desktops.Get(payload.SourceDesktopID); err != nil {
-						if !errors.Is(err, state.ErrNotFound) {
-							logger.Error("failed to get source desktop state", append(loggerOpts, zap.Error(err))...)
-							continue
-						}
+		payload, ok := eventPayload.(bspc.EventNodeSwap)
+		if !ok {
+			return errors.New("invalid event payload")
+		}
 
-						isSourceDesktopMonocled = false
-					}
+		if payload.SourceDesktopID == payload.DestinationDesktopID {
+			// TODO: Is this even possible?
+			// It's not going to affect this mode. Move on.
+			return nil
+		}
 
-					isDestinationDesktopMonocled := true
-					if _, err := desktops.Get(payload.DestinationDesktopID); err != nil {
-						if !errors.Is(err, state.ErrNotFound) {
-							logger.Error("failed to get destination desktop state", append(loggerOpts, zap.Error(err))...)
-							continue
-						}
+		// TODO: Use this strategy in the other log instances.
+		loggerOpts := []zap.Field{
+			zap.Uint("source_desktop_id", uint(payload.SourceDesktopID)),
+			zap.Uint("destination_desktop_id", uint(payload.DestinationDesktopID)),
+			zap.Uint("source_node_id", uint(payload.SourceNodeID)),
+			zap.Uint("destination_node_id", uint(payload.DestinationNodeID)),
+		}
 
-						isDestinationDesktopMonocled = false
-					}
+		isSourceDesktopMonocled := true
+		if _, err := desktops.Get(payload.SourceDesktopID); err != nil {
+			if !errors.Is(err, state.ErrNotFound) {
+				logger.Error("failed to get source desktop state", append(loggerOpts, zap.Error(err))...)
+				return err
+			}
 
-					if !isSourceDesktopMonocled && !isDestinationDesktopMonocled {
-						// None of them are in monocle mode. Ignore.
-						continue
-					}
+			isSourceDesktopMonocled = false
+		}
 
-					// TODO: Move these bspc calls to a service layer so they can be reused more idiomatically.
-					// TODO: This gets called in handleNodeAdded. Is there a way I can reuse this there?
-					var sourceNode bspc.Node
-					if err := client.Query(fmt.Sprintf("query -n %d -T", payload.SourceNodeID), bspc.ToStruct(&sourceNode)); err != nil {
-						logger.Error("failed to query source node info", append(loggerOpts, zap.Error(err))...)
-						continue
-					}
+		isDestinationDesktopMonocled := true
+		if _, err := desktops.Get(payload.DestinationDesktopID); err != nil {
+			if !errors.Is(err, state.ErrNotFound) {
+				logger.Error("failed to get destination desktop state", append(loggerOpts, zap.Error(err))...)
+				return err
+			}
 
-					var destinationNode bspc.Node
-					if err := client.Query(fmt.Sprintf("query -n %d -T", payload.DestinationNodeID), bspc.ToStruct(&destinationNode)); err != nil {
-						logger.Error("failed to query destination node info", append(loggerOpts, zap.Error(err))...)
-						continue
-					}
+			isDestinationDesktopMonocled = false
+		}
 
-					// TODO: This is probably not the best type. I'd need to change the `getVisibleLeafNodes` function to return a slice instead.
-					sourceNodes := map[bspc.ID]bspc.Node{sourceNode.ID: sourceNode}
-					if !isLeafNode(sourceNode) {
-						sourceNodes = getVisibleLeafNodes(sourceNode)
-					}
+		if !isSourceDesktopMonocled && !isDestinationDesktopMonocled {
+			// None of them are in monocle mode. Ignore.
+			return nil
+		}
 
-					destinationNodes := map[bspc.ID]bspc.Node{destinationNode.ID: destinationNode}
-					if !isLeafNode(destinationNode) {
-						destinationNodes = getVisibleLeafNodes(destinationNode)
-					}
+		// TODO: This gets called in handleNodeAdded. Is there a way I can reuse this there?
+		sourceNode, err := service.Nodes().Get(filter.NodeID(payload.SourceNodeID))
+		if err != nil {
+			logger.Error("failed to get source node info", append(loggerOpts, zap.Error(err))...)
+			return err
+		}
 
-					for _, n := range sourceNodes {
-						// We can't add hidden nodes to a desktop
-						if n.Hidden {
-							if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", n.ID), nil); err != nil {
-								logger.Error("failed to show hidden node being swapped",
-									append(loggerOpts, zap.Error(err))...,
-								)
-								continue
-							}
-						}
-					}
+		destinationNode, err := service.Nodes().Get(filter.NodeID(payload.DestinationNodeID))
+		if err != nil {
+			logger.Error("failed to get destination node info", append(loggerOpts, zap.Error(err))...)
+			return err
+		}
 
-					for _, n := range destinationNodes {
-						// We can't add hidden nodes to a desktop
-						if n.Hidden {
-							if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", n.ID), nil); err != nil {
-								logger.Error("failed to show hidden node being swapped",
-									append(loggerOpts, zap.Error(err))...,
-								)
-								continue
-							}
-						}
-					}
+		// TODO: This is probably not the best type. I'd need to change the `getVisibleLeafNodes` function to return a slice instead.
+		sourceNodes := map[bspc.ID]bspc.Node{sourceNode.ID: sourceNode}
+		if !isLeafNode(sourceNode) {
+			sourceNodes = getVisibleLeafNodes(sourceNode)
+		}
 
-					// TODO: we can't know what node was focused atm. So the newly focused node (the one called last below) is
-					//  going to be random for now. Refactor this when I add an internal representation of bspwm's state.
+		destinationNodes := map[bspc.ID]bspc.Node{destinationNode.ID: destinationNode}
+		if !isLeafNode(destinationNode) {
+			destinationNodes = getVisibleLeafNodes(destinationNode)
+		}
 
-					for id := range sourceNodes {
-						if err := handleNodeRemoved(logger, client, desktops, payload.SourceDesktopID, id); err != nil {
-							logger.Error("failed to handle node swap (across desktops) source node removal at source desktop",
-								append(loggerOpts, zap.Error(err))...,
-							)
-						}
-					}
-					for id := range destinationNodes {
-						if err := handleNodeRemoved(logger, client, desktops, payload.DestinationDesktopID, id); err != nil {
-							logger.Error("failed to handle node swap (across desktops) destination node added at destination desktop",
-								append(loggerOpts, zap.Error(err))...,
-							)
-						}
-					}
-
-					for id := range sourceNodes {
-						if err := handleNodeAdded(logger, client, desktops, payload.DestinationDesktopID, id); err != nil {
-							logger.Error("failed to handle node swap (across desktops) source node added at destination desktop",
-								append(loggerOpts, zap.Error(err))...,
-							)
-						}
-					}
-					for id := range destinationNodes {
-						if err := handleNodeAdded(logger, client, desktops, payload.SourceDesktopID, id); err != nil {
-							logger.Error("failed to handle node swap (across desktops) destination node added at source desktop",
-								append(loggerOpts, zap.Error(err))...,
-							)
-						}
-					}
+		for _, n := range sourceNodes {
+			// We can't add hidden nodes to a desktop
+			if n.Hidden {
+				if err := service.Nodes().SetVisibility(n.ID, true); err != nil {
+					logger.Error("failed to show hidden node being swapped",
+						append(loggerOpts, zap.Error(err))...,
+					)
+					// TODO: At this point, the mode might be crashed. How to handle this gracefully?
+					//  Same for other errors below. Saga pattern won't help here, I think.
+					return err
 				}
 			}
 		}
-	}()
 
-	cancelFunc := func() { cancelCh <- struct{}{} }
+		for _, n := range destinationNodes {
+			// We can't add hidden nodes to a desktop
+			if n.Hidden {
+				if err := service.Nodes().SetVisibility(n.ID, true); err != nil {
+					logger.Error("failed to show hidden node being swapped",
+						append(loggerOpts, zap.Error(err))...,
+					)
+
+					return err
+				}
+			}
+		}
+
+		// TODO: we can't know what node was focused atm. So the newly focused node (the one called last below) is
+		//  going to be random for now. Refactor this when I add an internal representation of bspwm's state.
+
+		for id := range sourceNodes {
+			if err := handleNodeRemoved(logger, service, desktops, payload.SourceDesktopID, id); err != nil {
+				logger.Error("failed to handle node swap (across desktops) source node removal at source desktop",
+					append(loggerOpts, zap.Error(err))...,
+				)
+
+				return err
+			}
+		}
+		for id := range destinationNodes {
+			if err := handleNodeRemoved(logger, service, desktops, payload.DestinationDesktopID, id); err != nil {
+				logger.Error("failed to handle node swap (across desktops) destination node added at destination desktop",
+					append(loggerOpts, zap.Error(err))...,
+				)
+
+				return err
+			}
+		}
+
+		for id := range sourceNodes {
+			if err := handleNodeAdded(logger, service, desktops, payload.DestinationDesktopID, id); err != nil {
+				logger.Error("failed to handle node swap (across desktops) source node added at destination desktop",
+					append(loggerOpts, zap.Error(err))...,
+				)
+
+				return err
+			}
+		}
+		for id := range destinationNodes {
+			if err := handleNodeAdded(logger, service, desktops, payload.SourceDesktopID, id); err != nil {
+				logger.Error("failed to handle node swap (across desktops) destination node added at source desktop",
+					append(loggerOpts, zap.Error(err))...,
+				)
+
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	cancelFunc, err := service.Events().Start()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to start event manager")
+	}
 
 	return &transparentMonocle{
-		logger:     logger,
-		bspcClient: client,
-		desktops:   desktops,
+		logger:   logger,
+		service:  service,
+		desktops: desktops,
 	}, cancelFunc, nil
 }
 
 func handleNodeRemoved(
 	logger *log.Logger,
-	client bspc.Client,
+	service bspwm.Service,
 	desktops state.TransparentMonocle,
 	desktopID bspc.ID,
 	nodeID bspc.ID,
@@ -335,7 +320,7 @@ func handleNodeRemoved(
 	if len(st.HiddenNodeIDs) != 0 {
 		newSelectedNodeID = &st.HiddenNodeIDs[len(st.HiddenNodeIDs)-1]
 
-		if err := client.Query(fmt.Sprintf("node %d --flag hidden=off", *newSelectedNodeID), nil); err != nil {
+		if err := service.Nodes().SetVisibility(*newSelectedNodeID, true); err != nil {
 			return fmt.Errorf("failed to show newly focused node: %w", err)
 		}
 
@@ -352,14 +337,14 @@ func handleNodeRemoved(
 
 func handleNodeAdded(
 	logger *log.Logger,
-	client bspc.Client,
+	service bspwm.Service,
 	desktops state.TransparentMonocle,
 	desktopID bspc.ID,
 	nodeID bspc.ID,
 ) error {
-	var addedNode bspc.Node
-	if err := client.Query(fmt.Sprintf("query -n %d -T", nodeID), bspc.ToStruct(&addedNode)); err != nil {
-		return fmt.Errorf("failed to retrieve info on added node: %w", err)
+	addedNode, err := service.Nodes().Get(filter.NodeID(nodeID))
+	if err != nil {
+		return fmt.Errorf("failed to get added node: %w", err)
 	}
 
 	if addedNode.Client.State == bspc.StateTypeFloating {
@@ -383,7 +368,7 @@ func handleNodeAdded(
 
 	newHiddenNodeIDs := st.HiddenNodeIDs
 	if st.SelectedNodeID != nil {
-		if err := client.Query(fmt.Sprintf("node %d --flag hidden=on", *st.SelectedNodeID), nil); err != nil {
+		if err := service.Nodes().SetVisibility(*st.SelectedNodeID, false); err != nil {
 			return fmt.Errorf("failed to hide previously focused node: %w", err)
 		}
 
@@ -399,9 +384,9 @@ func handleNodeAdded(
 }
 
 func (tm transparentMonocle) ToggleCurrentDesktop() error {
-	var desktop bspc.Desktop
-	if err := tm.bspcClient.Query("query -d focused -T", bspc.ToStruct(&desktop)); err != nil {
-		return fmt.Errorf("failed to get current desktop state: %v", err)
+	desktop, err := tm.service.Desktops().Get(filter.DesktopFocused)
+	if err != nil {
+		return fmt.Errorf("failed to get current desktop: %w", err)
 	}
 
 	st, err := tm.desktops.Delete(desktop.ID)
@@ -417,7 +402,7 @@ func (tm transparentMonocle) ToggleCurrentDesktop() error {
 }
 
 func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
-	if err := tm.bspcClient.Query("desktop focused -l monocle", nil); err != nil {
+	if err := tm.service.Desktops().SetLayout(filter.DesktopFocused, bspc.LayoutTypeMonocle); err != nil {
 		return fmt.Errorf("failed to set current desktop monocle layout: %v", err)
 	}
 
@@ -433,8 +418,8 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 		if n := allNodes[focused]; n.Client.State == bspc.StateTypeFloating {
 			// If the focused node when monocle mode is activated is a floating node,
 			// we'll just use the biggest node as the main one.
-			var biggestNode bspc.Node
-			if err := tm.bspcClient.Query("query -n biggest.local -T", bspc.ToStruct(&biggestNode)); err != nil {
+			biggestNode, err := tm.service.Nodes().Get(filter.NodeLocalBiggest)
+			if err != nil {
 				return fmt.Errorf("failed to query biggest node in current desktop: %v", err)
 			}
 
@@ -450,8 +435,8 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 				continue
 			}
 
-			if err := tm.bspcClient.Query(fmt.Sprintf("node %d --flag hidden=on", id), nil); err != nil {
-				return fmt.Errorf("failed to hide %d node: %v", id, err)
+			if err := tm.service.Nodes().SetVisibility(id, false); err != nil {
+				return fmt.Errorf("failed to hide node: %w", err)
 			}
 
 			hiddenNodeIDs = append(hiddenNodeIDs, id)
@@ -468,21 +453,21 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 
 func (tm transparentMonocle) disableMode(st state.TransparentMonocleState) error {
 	for _, n := range st.HiddenNodeIDs {
-		if err := tm.bspcClient.Query(fmt.Sprintf("node %d --flag hidden=off", n), nil); err != nil {
-			return fmt.Errorf("failed to un-hide %d node: %v", n, err)
+		if err := tm.service.Nodes().SetVisibility(n, true); err != nil {
+			return fmt.Errorf("failed to show node: %w", err)
 		}
 	}
 
-	if err := tm.bspcClient.Query("desktop focused -l tiled", nil); err != nil {
-		return fmt.Errorf("failed to set current desktop tiled layout: %v", err)
+	if err := tm.service.Desktops().SetLayout(filter.DesktopFocused, bspc.LayoutTypeTiled); err != nil {
+		return fmt.Errorf("failed to set current desktop tiled layout: %w", err)
 	}
 
 	return nil
 }
 
 func (tm transparentMonocle) FocusPreviousHiddenNode() error {
-	var desktop bspc.Desktop
-	if err := tm.bspcClient.Query("query -d focused -T", bspc.ToStruct(&desktop)); err != nil {
+	desktop, err := tm.service.Desktops().Get(filter.DesktopFocused)
+	if err != nil {
 		return fmt.Errorf("failed to get current desktop state: %v", err)
 	}
 
@@ -501,11 +486,11 @@ func (tm transparentMonocle) FocusPreviousHiddenNode() error {
 	}
 
 	nextNodeID := st.HiddenNodeIDs[len(st.HiddenNodeIDs)-1]
-	if err := tm.bspcClient.Query(fmt.Sprintf("node %d --flag hidden=off", nextNodeID), nil); err != nil {
+	if err := tm.service.Nodes().SetVisibility(nextNodeID, true); err != nil {
 		return fmt.Errorf("failed to un-hide %d node: %v", nextNodeID, err)
 	}
 
-	if err := tm.bspcClient.Query(fmt.Sprintf("node %d --flag hidden=on", *st.SelectedNodeID), nil); err != nil {
+	if err := tm.service.Nodes().SetVisibility(*st.SelectedNodeID, false); err != nil {
 		return fmt.Errorf("failed to hide %d node: %v", st.SelectedNodeID, err)
 	}
 
@@ -518,8 +503,8 @@ func (tm transparentMonocle) FocusPreviousHiddenNode() error {
 }
 
 func (tm transparentMonocle) FocusNextHiddenNode() error {
-	var desktop bspc.Desktop
-	if err := tm.bspcClient.Query("query -d focused -T", bspc.ToStruct(&desktop)); err != nil {
+	desktop, err := tm.service.Desktops().Get(filter.DesktopFocused)
+	if err != nil {
 		return fmt.Errorf("failed to get current desktop state: %v", err)
 	}
 
@@ -538,11 +523,11 @@ func (tm transparentMonocle) FocusNextHiddenNode() error {
 	}
 
 	nextNodeID := st.HiddenNodeIDs[0]
-	if err := tm.bspcClient.Query(fmt.Sprintf("node %d --flag hidden=off", nextNodeID), nil); err != nil {
-		return fmt.Errorf("failed to un-hide %d node: %v", nextNodeID, err)
+	if err := tm.service.Nodes().SetVisibility(nextNodeID, true); err != nil {
+		return fmt.Errorf("failed to show %d node: %v", nextNodeID, err)
 	}
 
-	if err := tm.bspcClient.Query(fmt.Sprintf("node %d --flag hidden=on", *st.SelectedNodeID), nil); err != nil {
+	if err := tm.service.Nodes().SetVisibility(*st.SelectedNodeID, false); err != nil {
 		return fmt.Errorf("failed to hide %d node: %v", st.SelectedNodeID, err)
 	}
 
