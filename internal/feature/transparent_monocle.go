@@ -203,8 +203,12 @@ func StartTransparentMonocle(
 			}
 		}
 
-		// TODO: we can't know what node was focused atm. So the newly focused node (the one called last below) is
-		//  going to be random for now. Refactor this when I add an internal representation of bspwm's state.
+		st, err := service.State()
+		if err != nil {
+			logger.Error("failed to retrieve bspwm's current state",
+				append(loggerOpts, zap.Error(err))...,
+			)
+		}
 
 		for _, n := range sourceNodes {
 			if err := handleNodeRemoved(logger, service, desktops, payload.SourceDesktopID, n.ID); err != nil {
@@ -222,6 +226,28 @@ func StartTransparentMonocle(
 				)
 
 				return err
+			}
+		}
+
+		if len(sourceNodes) == 1 {
+			focusedIndex, ok := findMostRecentlyFocusedNode(st.OrderedFocusHistory(), payload.SourceDesktopID, sourceNodes)
+			if ok {
+				focusedNode := sourceNodes[focusedIndex]
+
+				// Move node to focus to the end of the slice so it gets called last. (giving it focus)
+				sourceNodes = append(sourceNodes[:focusedIndex], sourceNodes[focusedIndex+1:]...)
+				sourceNodes = append(sourceNodes, focusedNode)
+			}
+		}
+
+		if len(destinationNodes) == 1 {
+			focusedIndex, ok := findMostRecentlyFocusedNode(st.OrderedFocusHistory(), payload.DestinationDesktopID, destinationNodes)
+			if ok {
+				focusedNode := destinationNodes[focusedIndex]
+
+				// Move node to focus to the end of the slice so it gets called last. (giving it focus)
+				destinationNodes = append(destinationNodes[:focusedIndex], destinationNodes[focusedIndex+1:]...)
+				destinationNodes = append(destinationNodes, focusedNode)
 			}
 		}
 
@@ -547,4 +573,21 @@ func removeFromSlice(slice []bspc.ID, toRemove bspc.ID) []bspc.ID {
 	}
 
 	return ss
+}
+
+// findMostRecentlyFocusedNode returns the node from the provided slice that shows up first in the focused node history.
+func findMostRecentlyFocusedNode(focusHistory []bspc.StateFocusHistoryEntry, relevantDesktopID bspc.ID, nodes []bspc.Node) (int, bool) {
+	for _, prevFocusedNode := range focusHistory {
+		if prevFocusedNode.DesktopID != relevantDesktopID {
+			continue
+		}
+
+		for index, n := range nodes {
+			if prevFocusedNode.NodeID == n.ID {
+				return index, true
+			}
+		}
+	}
+
+	return -1, false
 }

@@ -41,6 +41,7 @@ func runDaemon(logger *log.Logger) error {
 		logger,
 		state.NewTransparentMonocle(),
 		bspwm.NewService(
+			bspwmClient,
 			bspwmdesktop.NewService(bspwmClient),
 			bspwmnode.NewService(bspwmClient),
 			bspwmevent.NewManager(logger, bspwmClient),

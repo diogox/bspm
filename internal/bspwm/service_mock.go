@@ -5,6 +5,7 @@
 package bspwm
 
 import (
+	bspc "github.com/diogox/bspc-go"
 	bspwmdesktop "github.com/diogox/bspm/internal/bspwm/desktop"
 	bspwmevent "github.com/diogox/bspm/internal/bspwm/event"
 	bspwmnode "github.com/diogox/bspm/internal/bspwm/node"
@@ -75,4 +76,19 @@ func (m *MockService) Nodes() bspwmnode.Service {
 func (mr *MockServiceMockRecorder) Nodes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Nodes", reflect.TypeOf((*MockService)(nil).Nodes))
+}
+
+// State mocks base method
+func (m *MockService) State() (bspc.State, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "State")
+	ret0, _ := ret[0].(bspc.State)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// State indicates an expected call of State
+func (mr *MockServiceMockRecorder) State() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "State", reflect.TypeOf((*MockService)(nil).State))
 }
