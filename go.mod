@@ -3,7 +3,7 @@ module github.com/diogox/bspm
 go 1.15
 
 require (
-	github.com/diogox/bspc-go v0.0.0-20210214194434-b9726aa9e65e
+	github.com/diogox/bspc-go v0.0.0-20210222214855-663c9dbacfbf
 	github.com/fatih/color v1.10.0
 	github.com/golang/mock v1.4.4
 	github.com/stretchr/testify v1.7.0

@@ -34,6 +34,8 @@ github.com/diogox/bspc-go v0.0.0-20210214192834-fa6ed748360a h1:SQakp92W44IqCg1d
 github.com/diogox/bspc-go v0.0.0-20210214192834-fa6ed748360a/go.mod h1:0WUzLLyXqCBHXV4dk5O9H2O3PcUxlLtYv/MRNR1Dkcs=
 github.com/diogox/bspc-go v0.0.0-20210214194434-b9726aa9e65e h1:dHdbwD+GAx8zCRLaQbQgdNqVa7nZhemKPnGKFW2zrDU=
 github.com/diogox/bspc-go v0.0.0-20210214194434-b9726aa9e65e/go.mod h1:0WUzLLyXqCBHXV4dk5O9H2O3PcUxlLtYv/MRNR1Dkcs=
+github.com/diogox/bspc-go v0.0.0-20210222214855-663c9dbacfbf h1:wMFi0PgssldUrJ5hLAY+J7Hs2H+CLX25UHkz1xRGeq4=
+github.com/diogox/bspc-go v0.0.0-20210222214855-663c9dbacfbf/go.mod h1:0WUzLLyXqCBHXV4dk5O9H2O3PcUxlLtYv/MRNR1Dkcs=
 github.com/fatih/color v1.10.0 h1:s36xzo75JdqLaaWoiEHk767eHiwo0598uUxyfiPkDsg=
 github.com/fatih/color v1.10.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGEBuJM=
 github.com/golang/mock v1.4.4 h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=

@@ -171,16 +171,10 @@ func StartTransparentMonocle(
 			return err
 		}
 
-		// TODO: This is probably not the best type. I'd need to change the `getVisibleLeafNodes` function to return a slice instead.
-		sourceNodes := map[bspc.ID]bspc.Node{sourceNode.ID: sourceNode}
-		if !isLeafNode(sourceNode) {
-			sourceNodes = getVisibleLeafNodes(sourceNode)
-		}
-
-		destinationNodes := map[bspc.ID]bspc.Node{destinationNode.ID: destinationNode}
-		if !isLeafNode(destinationNode) {
-			destinationNodes = getVisibleLeafNodes(destinationNode)
-		}
+		var (
+			sourceNodes      = sourceNode.LeafNodes()
+			destinationNodes = destinationNode.LeafNodes()
+		)
 
 		for _, n := range sourceNodes {
 			// We can't add hidden nodes to a desktop
@@ -212,8 +206,8 @@ func StartTransparentMonocle(
 		// TODO: we can't know what node was focused atm. So the newly focused node (the one called last below) is
 		//  going to be random for now. Refactor this when I add an internal representation of bspwm's state.
 
-		for id := range sourceNodes {
-			if err := handleNodeRemoved(logger, service, desktops, payload.SourceDesktopID, id); err != nil {
+		for _, n := range sourceNodes {
+			if err := handleNodeRemoved(logger, service, desktops, payload.SourceDesktopID, n.ID); err != nil {
 				logger.Error("failed to handle node swap (across desktops) source node removal at source desktop",
 					append(loggerOpts, zap.Error(err))...,
 				)
@@ -221,8 +215,8 @@ func StartTransparentMonocle(
 				return err
 			}
 		}
-		for id := range destinationNodes {
-			if err := handleNodeRemoved(logger, service, desktops, payload.DestinationDesktopID, id); err != nil {
+		for _, n := range destinationNodes {
+			if err := handleNodeRemoved(logger, service, desktops, payload.DestinationDesktopID, n.ID); err != nil {
 				logger.Error("failed to handle node swap (across desktops) destination node added at destination desktop",
 					append(loggerOpts, zap.Error(err))...,
 				)
@@ -231,8 +225,8 @@ func StartTransparentMonocle(
 			}
 		}
 
-		for id := range sourceNodes {
-			if err := handleNodeAdded(logger, service, desktops, payload.DestinationDesktopID, id); err != nil {
+		for _, n := range sourceNodes {
+			if err := handleNodeAdded(logger, service, desktops, payload.DestinationDesktopID, n.ID); err != nil {
 				logger.Error("failed to handle node swap (across desktops) source node added at destination desktop",
 					append(loggerOpts, zap.Error(err))...,
 				)
@@ -240,8 +234,8 @@ func StartTransparentMonocle(
 				return err
 			}
 		}
-		for id := range destinationNodes {
-			if err := handleNodeAdded(logger, service, desktops, payload.SourceDesktopID, id); err != nil {
+		for _, n := range destinationNodes {
+			if err := handleNodeAdded(logger, service, desktops, payload.SourceDesktopID, n.ID); err != nil {
 				logger.Error("failed to handle node swap (across desktops) destination node added at source desktop",
 					append(loggerOpts, zap.Error(err))...,
 				)
@@ -412,10 +406,13 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 	)
 
 	if focused := desktop.FocusedNodeID; focused != bspc.NilID {
-		allNodes := getVisibleLeafNodes(desktop.Root)
+		leafNodes := make(map[bspc.ID]bspc.Node)
+		for _, n := range desktop.Root.LeafNodes() {
+			leafNodes[n.ID] = n
+		}
 
 		selectedNodeID = &focused
-		if n := allNodes[focused]; n.Client.State == bspc.StateTypeFloating {
+		if n := leafNodes[focused]; n.Client.State == bspc.StateTypeFloating {
 			// If the focused node when monocle mode is activated is a floating node,
 			// we'll just use the biggest node as the main one.
 			biggestNode, err := tm.service.Nodes().Get(filter.NodeLocalBiggest)
@@ -426,7 +423,7 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 			selectedNodeID = &biggestNode.ID
 		}
 
-		for id, n := range allNodes {
+		for id, n := range leafNodes {
 			if id == *selectedNodeID {
 				continue
 			}
@@ -550,36 +547,4 @@ func removeFromSlice(slice []bspc.ID, toRemove bspc.ID) []bspc.ID {
 	}
 
 	return ss
-}
-
-// This retrieves only the nodes that correspond to actual windows.
-// Some nodes only serve to split the screen to hold other nodes.
-// They don't represent windows.
-// TODO: I made this return type into a map for simplicity in the code above. Could there be a performance hit, though?
-//  If so, revert it.
-func getVisibleLeafNodes(node bspc.Node) map[bspc.ID]bspc.Node {
-	nodes := make(map[bspc.ID]bspc.Node)
-
-	if isLeafNode(node) {
-		nodes[node.ID] = node
-	}
-
-	if node.FirstChild != nil {
-		for k, v := range getVisibleLeafNodes(*node.FirstChild) {
-			nodes[k] = v
-		}
-	}
-
-	if node.SecondChild != nil {
-		for k, v := range getVisibleLeafNodes(*node.SecondChild) {
-			nodes[k] = v
-		}
-	}
-
-	return nodes
-}
-
-// TODO: Add this as a method to nodes in bspc-go?
-func isLeafNode(node bspc.Node) bool {
-	return node.FirstChild == nil && node.SecondChild == nil
 }
