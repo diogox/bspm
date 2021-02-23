@@ -1,4 +1,4 @@
-package feature_test
+package transparentmonocle_test
 
 import (
 	"testing"
@@ -11,8 +11,8 @@ import (
 
 	"github.com/diogox/bspm/internal/bspwm"
 	bspwmevent "github.com/diogox/bspm/internal/bspwm/event"
-	"github.com/diogox/bspm/internal/feature"
-	"github.com/diogox/bspm/internal/feature/state"
+	transparentmonocle "github.com/diogox/bspm/internal/feature/transparent_monocle"
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
 	"github.com/diogox/bspm/internal/log"
 )
 
@@ -26,7 +26,7 @@ func TestNewTransparentMonocle(t *testing.T) {
 		var (
 			mockEventManager = bspwmevent.NewMockManager(ctrl)
 			mockService      = bspwm.NewMockService(ctrl)
-			mockState        = state.NewMockTransparentMonocle(ctrl)
+			mockState        = state.NewMockManager(ctrl)
 		)
 
 		mockService.EXPECT().
@@ -48,7 +48,7 @@ func TestNewTransparentMonocle(t *testing.T) {
 		logger, err := log.New(zaptest.NewLogger(t), false)
 		require.NoError(t, err)
 
-		_, _, err = feature.StartTransparentMonocle(logger, mockState, mockService)
+		_, _, err = transparentmonocle.Start(logger, mockState, mockService)
 		assert.NoError(t, err)
 	})
 }

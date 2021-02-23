@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/diogox/bspm/internal/feature/state"
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
 )
 
 func TestTransparentMonocle_Get(t *testing.T) {
@@ -17,7 +17,7 @@ func TestTransparentMonocle_Get(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			st             = state.TransparentMonocleState{
+			st             = state.State{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}
@@ -58,7 +58,7 @@ func TestTransparentMonocle_Set(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			st             = state.TransparentMonocleState{
+			st             = state.State{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}
@@ -79,7 +79,7 @@ func TestTransparentMonocle_Delete(t *testing.T) {
 		var (
 			desktopID      = bspc.ID(1)
 			selectedNodeID = bspc.ID(2)
-			st             = state.TransparentMonocleState{
+			st             = state.State{
 				SelectedNodeID: &selectedNodeID,
 				HiddenNodeIDs:  []bspc.ID{3},
 			}

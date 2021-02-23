@@ -1,7 +1,7 @@
-//go:generate mockgen -package feature -destination ./bspc_mock.go github.com/diogox/bspc-go Client
-//go:generate mockgen -package feature -destination ./transparent_monocle_mock.go -self_package github.com/diogox/bspm/internal/feature github.com/diogox/bspm/internal/feature TransparentMonocle
+//go:generate mockgen -package transparentmonocle -destination ./bspc_mock.go github.com/diogox/bspc-go Client
+//go:generate mockgen -package transparentmonocle -destination ./transparent_monocle_mock.go -self_package github.com/diogox/bspm/internal/feature/transparent_monocle github.com/diogox/bspm/internal/feature/transparent_monocle Feature
 
-package feature
+package transparentmonocle
 
 import (
 	"errors"
@@ -13,12 +13,12 @@ import (
 	"github.com/diogox/bspm/internal/bspwm"
 	"github.com/diogox/bspm/internal/bspwm/filter"
 
-	"github.com/diogox/bspm/internal/feature/state"
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
 	"github.com/diogox/bspm/internal/log"
 )
 
 type (
-	TransparentMonocle interface {
+	Feature interface {
 		ToggleCurrentDesktop() error
 		FocusPreviousHiddenNode() error
 		FocusNextHiddenNode() error
@@ -27,15 +27,15 @@ type (
 	transparentMonocle struct {
 		logger   *log.Logger
 		service  bspwm.Service
-		desktops state.TransparentMonocle
+		desktops state.Manager
 	}
 )
 
-func StartTransparentMonocle(
+func Start(
 	logger *log.Logger,
-	desktops state.TransparentMonocle,
+	desktops state.Manager,
 	service bspwm.Service,
-) (TransparentMonocle, func(), error) {
+) (Feature, func(), error) {
 	service.Events().On(bspc.EventTypeNodeAdd, func(eventPayload interface{}) error {
 		payload, ok := eventPayload.(bspc.EventNodeAdd)
 		if !ok {
@@ -286,7 +286,7 @@ func StartTransparentMonocle(
 func handleNodeRemoved(
 	logger *log.Logger,
 	service bspwm.Service,
-	desktops state.TransparentMonocle,
+	desktops state.Manager,
 	desktopID bspc.ID,
 	nodeID bspc.ID,
 ) error {
@@ -309,7 +309,7 @@ func handleNodeRemoved(
 		}
 
 		if isHiddenNode {
-			desktops.Set(desktopID, state.TransparentMonocleState{
+			desktops.Set(desktopID, state.State{
 				SelectedNodeID: st.SelectedNodeID,
 				HiddenNodeIDs:  removeFromSlice(st.HiddenNodeIDs, nodeID),
 			})
@@ -345,7 +345,7 @@ func handleNodeRemoved(
 		newHiddenNodeIDs = removeFromSlice(st.HiddenNodeIDs, *newSelectedNodeID)
 	}
 
-	desktops.Set(desktopID, state.TransparentMonocleState{
+	desktops.Set(desktopID, state.State{
 		SelectedNodeID: newSelectedNodeID,
 		HiddenNodeIDs:  newHiddenNodeIDs,
 	})
@@ -356,7 +356,7 @@ func handleNodeRemoved(
 func handleNodeAdded(
 	logger *log.Logger,
 	service bspwm.Service,
-	desktops state.TransparentMonocle,
+	desktops state.Manager,
 	desktopID bspc.ID,
 	nodeID bspc.ID,
 ) error {
@@ -393,7 +393,7 @@ func handleNodeAdded(
 		newHiddenNodeIDs = append(newHiddenNodeIDs, *st.SelectedNodeID)
 	}
 
-	desktops.Set(desktopID, state.TransparentMonocleState{
+	desktops.Set(desktopID, state.State{
 		SelectedNodeID: &nodeID,
 		HiddenNodeIDs:  newHiddenNodeIDs,
 	})
@@ -464,7 +464,7 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 		}
 	}
 
-	tm.desktops.Set(desktop.ID, state.TransparentMonocleState{
+	tm.desktops.Set(desktop.ID, state.State{
 		SelectedNodeID: selectedNodeID,
 		HiddenNodeIDs:  hiddenNodeIDs,
 	})
@@ -472,7 +472,7 @@ func (tm transparentMonocle) enableMode(desktop bspc.Desktop) error {
 	return nil
 }
 
-func (tm transparentMonocle) disableMode(st state.TransparentMonocleState) error {
+func (tm transparentMonocle) disableMode(st state.State) error {
 	for _, n := range st.HiddenNodeIDs {
 		if err := tm.service.Nodes().SetVisibility(n, true); err != nil {
 			return fmt.Errorf("failed to show node: %w", err)
@@ -515,7 +515,7 @@ func (tm transparentMonocle) FocusPreviousHiddenNode() error {
 		return fmt.Errorf("failed to hide %d node: %v", st.SelectedNodeID, err)
 	}
 
-	tm.desktops.Set(desktop.ID, state.TransparentMonocleState{
+	tm.desktops.Set(desktop.ID, state.State{
 		SelectedNodeID: &nextNodeID,
 		HiddenNodeIDs:  append([]bspc.ID{*st.SelectedNodeID}, removeFromSlice(st.HiddenNodeIDs, nextNodeID)...),
 	})
@@ -552,7 +552,7 @@ func (tm transparentMonocle) FocusNextHiddenNode() error {
 		return fmt.Errorf("failed to hide %d node: %v", st.SelectedNodeID, err)
 	}
 
-	tm.desktops.Set(desktop.ID, state.TransparentMonocleState{
+	tm.desktops.Set(desktop.ID, state.State{
 		SelectedNodeID: &nextNodeID,
 		HiddenNodeIDs:  append(removeFromSlice(st.HiddenNodeIDs, nextNodeID), *st.SelectedNodeID),
 	})

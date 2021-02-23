@@ -14,8 +14,8 @@ import (
 	bspwmdesktop "github.com/diogox/bspm/internal/bspwm/desktop"
 	bspwmevent "github.com/diogox/bspm/internal/bspwm/event"
 	bspwmnode "github.com/diogox/bspm/internal/bspwm/node"
-	"github.com/diogox/bspm/internal/feature"
-	"github.com/diogox/bspm/internal/feature/state"
+	transparentmonocle "github.com/diogox/bspm/internal/feature/transparent_monocle"
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
 	"github.com/diogox/bspm/internal/ipc"
 	"github.com/diogox/bspm/internal/log"
 )
@@ -37,7 +37,7 @@ func runDaemon(logger *log.Logger) error {
 		return fmt.Errorf("failed to initialise bspwm client: %v", err)
 	}
 
-	monocle, cancel, err := feature.StartTransparentMonocle(
+	monocle, cancel, err := transparentmonocle.Start(
 		logger,
 		state.NewTransparentMonocle(),
 		bspwm.NewService(
