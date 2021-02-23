@@ -25,6 +25,11 @@ jobs:
         path: ~/go/pkg/mod
         key: ${{ runner.OS }}-go-${{ hashFiles('**/go.sum') }}
 
+    - name: Generate Mocks
+      run: |
+        go install github.com/golang/mock/mockgen
+        make generate
+
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v2
       with:
