@@ -40,6 +40,14 @@ github.com/diogox/bspc-go v0.0.0-20210222225301-092068f0bcc2 h1:VY8qz3N3LHXpslch
 github.com/diogox/bspc-go v0.0.0-20210222225301-092068f0bcc2/go.mod h1:0WUzLLyXqCBHXV4dk5O9H2O3PcUxlLtYv/MRNR1Dkcs=
 github.com/diogox/bspc-go v0.0.0-20210222233335-ddbb8522bfa6 h1:W52pb9PI5QNZPUdPh8RfIOB7Hw7Pw1Rq6HvjVrXwvmE=
 github.com/diogox/bspc-go v0.0.0-20210222233335-ddbb8522bfa6/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
+github.com/diogox/bspc-go v0.0.0-20210223002205-a99ae2f75ba4 h1:XZV8Bg71BzsE2kalc7Di/foWCL23bTj0YtXktVQ/AZE=
+github.com/diogox/bspc-go v0.0.0-20210223002205-a99ae2f75ba4/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
+github.com/diogox/bspc-go v0.0.0-20210223002410-7ec8fce80f06 h1:aTLNl5BZ0lT3lB2oC2n2ohAr/SlgVLexatW3bXT0o98=
+github.com/diogox/bspc-go v0.0.0-20210223002410-7ec8fce80f06/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
+github.com/diogox/bspc-go v0.0.0-20210223003722-5d6c1c8b4745 h1:Ir3Kxi91fcH2Vdo7w2pvMNV9Y5ZWCZtV27gJV/ht51Y=
+github.com/diogox/bspc-go v0.0.0-20210223003722-5d6c1c8b4745/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
+github.com/diogox/bspc-go v0.0.0-20210223003857-a374b109650b h1:Z61d3aWQYD7DyngMzW/tc8rjNlx3Eql8i6G7isWEUCY=
+github.com/diogox/bspc-go v0.0.0-20210223003857-a374b109650b/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
 github.com/fatih/color v1.10.0 h1:s36xzo75JdqLaaWoiEHk767eHiwo0598uUxyfiPkDsg=
 github.com/fatih/color v1.10.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGEBuJM=
 github.com/golang/mock v1.4.4 h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=

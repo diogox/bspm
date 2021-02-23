@@ -80,8 +80,6 @@ func StartTransparentMonocle(
 			return errors.New("invalid event payload")
 		}
 
-		// TODO: I probably need to check for non-leaf nodes here. Like I did for Swaps below. Test it.
-
 		// The source node id is the id of the node being transferred.
 		// It's unclear what the destination node id is.
 		// I think it's the id of the node whose position we're going to replace with this one.

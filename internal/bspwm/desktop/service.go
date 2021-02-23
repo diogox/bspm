@@ -1,3 +1,4 @@
+//go:generate mockgen -package bspwmdesktop -destination ./bspc_mock.go github.com/diogox/bspc-go Client
 //go:generate mockgen -package bspwmdesktop -destination ./service_mock.go -self_package github.com/diogox/bspm/internal/bspwm/desktop github.com/diogox/bspm/internal/bspwm/desktop Service
 
 package bspwmdesktop
