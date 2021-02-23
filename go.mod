@@ -1,6 +1,6 @@
 module github.com/diogox/bspm
 
-go 1.15
+go 1.16
 
 require (
 	github.com/diogox/bspc-go v0.0.0-20210223003857-a374b109650b
