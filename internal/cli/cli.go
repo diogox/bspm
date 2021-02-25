@@ -24,11 +24,12 @@ type app struct {
 	cli *cli.App
 }
 
-func New(logger *zap.Logger) app {
+func New(logger *zap.Logger, version string) app {
 	return app{
 		cli: &cli.App{
-			Name:  "bspm",
-			Usage: "the bspwm manager",
+			Name:    "bspm",
+			Usage:   "the bspwm manager",
+			Version: version,
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:    flagKeyDaemon,
@@ -36,9 +37,8 @@ func New(logger *zap.Logger) app {
 					Usage:   "run the manager deamon",
 				},
 				&cli.BoolFlag{
-					Name:    flagKeyVerbose,
-					Aliases: []string{"v"},
-					Usage:   "verbose logging",
+					Name:  flagKeyVerbose,
+					Usage: "verbose logging",
 				},
 			},
 			Commands: []*cli.Command{
