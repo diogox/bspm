@@ -34,29 +34,29 @@ func New(logger *zap.Logger, version string) app {
 				&cli.BoolFlag{
 					Name:    flagKeyDaemon,
 					Aliases: []string{"d"},
-					Usage:   "run the manager deamon",
+					Usage:   "Run the manager deamon",
 				},
 				&cli.BoolFlag{
 					Name:  flagKeyVerbose,
-					Usage: "verbose logging",
+					Usage: "Verbose logging",
 				},
 			},
 			Commands: []*cli.Command{
 				{
 					Name:  "monocle",
-					Usage: "manages the transparent monocle workflow",
+					Usage: "Manages the transparent monocle workflow",
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  flagKeyMonocleToggle,
-							Usage: "toggles the transparent monocle workflow",
+							Usage: "Toggles the transparent monocle workflow",
 						},
 						&cli.BoolFlag{
 							Name:  flagKeyMonocleNext,
-							Usage: "shows the next node in the transparent monocle workflow",
+							Usage: "Shows the next node in the transparent monocle workflow",
 						},
 						&cli.BoolFlag{
 							Name:  flagKeyMonoclePrev,
-							Usage: "shows the previous node in the transparent monocle workflow",
+							Usage: "Shows the previous node in the transparent monocle workflow",
 						},
 					},
 					Action: func(ctx *cli.Context) error {
