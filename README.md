@@ -40,6 +40,18 @@ bspm monocle --prev
 
 That's it!
 
+---
+
+**Caution**: The `bspc node -k` command [will break this mode](https://github.com/diogox/bspm/issues/9).
+You can resume it simply by toggling it off and on again.
+To avoid this, you can replace that command in your `sxhkdrc` with one of the following:
+* `xdotool getwindowfocus windowkill`
+* `xkill -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d\# -f2)` (Not pretty, I know)
+
+You'll need to have the necessary dependencies installed for whatever command you choose.
+
+---
+
 **Here's a tip**: To be able to use `j` and `k` to cycle between nodes in this mode and still be able to use those keys 
 in `tiled` mode, you can use a script like this one:
 
