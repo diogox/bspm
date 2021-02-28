@@ -53,37 +53,10 @@ You'll need to have the necessary dependencies installed for whatever command yo
 ---
 
 **Here's a tip**: To be able to use `j` and `k` to cycle between nodes in this mode and still be able to use those keys 
-in `tiled` mode, you can use a script like this one:
-
-*Shell scripting isn't exactly my strong suit, (hence `bspm` being written in Go) so there might be a better way to write this script.*
-
-```shell
-#!/bin/bash
-current_layout=$(bspc query -T -d | jq -r .layout)
-   
-if [[ $current_layout == monocle ]]
-then
-  if [[ $@ == up ]]
-  then
-    bspm monocle --next
-  else
-    # We assume it's "down"
-    bspm monocle --prev
-  fi
-else
-  # Act normally
-  if [[ $@ == up ]]
-  then
-    bspc node -f north
-  else
-    # We assume it's "down"
-    bspc node -f south
-  fi
-fi
+in `tiled` mode, you can use the following snippet in your `sxhkdrc`:
 ```
-
-And then have something like this in your `sxhkdrc` file:
-```
-super + {j,k}
-  $PATH_TO_SCRIPT/script_name.sh {down,up}
+super + j
+	bspm monocle --prev || bspc node -f south
+super + k
+	bspm monocle --next || bspc node -f north
 ```

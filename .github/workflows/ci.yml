@@ -25,9 +25,13 @@ jobs:
         path: ~/go/pkg/mod
         key: ${{ runner.OS }}-go-${{ hashFiles('**/go.sum') }}
 
-    - name: Generate Mocks
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+
+    - name: Generate Mocks & Protobufs
       run: |
         go install github.com/golang/mock/mockgen
+        go get github.com/golang/protobuf/protoc-gen-go
         make generate
 
     - name: Run golangci-lint

@@ -31,6 +31,8 @@ type (
 	}
 )
 
+var ErrFeatureNotEnabled = errors.New("feature not enabled in current desktop")
+
 func Start(
 	logger *log.Logger,
 	desktops state.Manager,
@@ -495,7 +497,7 @@ func (tm transparentMonocle) FocusPreviousHiddenNode() error {
 	st, err := tm.desktops.Get(desktop.ID)
 	if err != nil {
 		if errors.Is(err, state.ErrNotFound) {
-			return nil
+			return ErrFeatureNotEnabled
 		}
 
 		return fmt.Errorf("failed to get desktop state: %v", err)
@@ -532,7 +534,7 @@ func (tm transparentMonocle) FocusNextHiddenNode() error {
 	st, err := tm.desktops.Get(desktop.ID)
 	if err != nil {
 		if errors.Is(err, state.ErrNotFound) {
-			return nil
+			return ErrFeatureNotEnabled
 		}
 
 		return fmt.Errorf("failed to get desktop state: %v", err)

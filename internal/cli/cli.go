@@ -3,12 +3,15 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/fatih/color"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
-	"github.com/diogox/bspm/internal/ipc"
+	"github.com/diogox/bspm/internal/grpc"
+	"github.com/diogox/bspm/internal/grpc/bspm"
 	"github.com/diogox/bspm/internal/log"
 )
 
@@ -41,6 +44,10 @@ func New(logger *zap.Logger, version string) app {
 					Usage: "Verbose logging",
 				},
 			},
+			ExitErrHandler: func(context *cli.Context, err error) {
+				color.Red("Failed: %v", err)
+				os.Exit(1)
+			},
 			Commands: []*cli.Command{
 				{
 					Name:  "monocle",
@@ -60,11 +67,10 @@ func New(logger *zap.Logger, version string) app {
 						},
 					},
 					Action: func(ctx *cli.Context) error {
-						c, err := ipc.NewClient()
+						c, err := grpc.NewClient()
 						if err != nil {
 							return err
 						}
-						defer c.Close()
 
 						if ctx.NumFlags() != 1 {
 							return errors.New("only one flag is expected")
@@ -76,21 +82,29 @@ func New(logger *zap.Logger, version string) app {
 							isPrev   = ctx.Bool(flagKeyMonoclePrev)
 						)
 
-						var msg ipc.Message
 						switch {
 						case isToggle:
-							msg = DaemonCommandMonocleToggle
+							if _, err := c.ToggleMonocleMode(ctx.Context, &empty.Empty{}); err != nil {
+								return fmt.Errorf("failed to toggle monocle mode: %w", err)
+							}
 						case isPrev:
-							msg = DaemonCommandMonoclePrevious
+							req := &bspm.MonocleModeCycleRequest{
+								CycleDirection: bspm.CycleDir_CYCLE_DIR_PREV,
+							}
+
+							if _, err := c.MonocleModeCycle(ctx.Context, req); err != nil {
+								return fmt.Errorf("failed to cycle to previous node in monocle mode: %w", err)
+							}
 						case isNext:
-							msg = DaemonCommandMonocleNext
+							req := &bspm.MonocleModeCycleRequest{
+								CycleDirection: bspm.CycleDir_CYCLE_DIR_NEXT,
+							}
+
+							if _, err := c.MonocleModeCycle(ctx.Context, req); err != nil {
+								return fmt.Errorf("failed to cycle to next node in monocle mode: %w", err)
+							}
 						default:
 							return errors.New("unexpected error")
-						}
-
-						if err := c.Send(msg); err != nil {
-							color.Red("Failed: %v", err)
-							return fmt.Errorf("failed to communicate with manager: %v", err)
 						}
 
 						return nil
@@ -116,4 +130,12 @@ func New(logger *zap.Logger, version string) app {
 			},
 		},
 	}
+}
+
+func (a app) Run() error {
+	if err := a.cli.Run(os.Args); err != nil {
+		return err
+	}
+
+	return nil
 }

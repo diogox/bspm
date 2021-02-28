@@ -13,7 +13,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: linux
         goarch: amd64
-        goversion: "https://golang.org/dl/go1.15.7.linux-amd64.tar.gz"
+        goversion: "https://golang.org/dl/go1.16.linux-amd64.tar.gz"
         project_path: ./cmd/bspm
         binary_name: bspm
         ldflags: "-s -w -X 'main.Version=${{ github.event.release.tag_name }}'"

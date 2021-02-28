@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package ipc;
+
+option go_package = ".;bspm";
+
+import "google/protobuf/empty.proto";
+
+service BSPM {
+  rpc ToggleMonocleMode(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc MonocleModeCycle(MonocleModeCycleRequest) returns (google.protobuf.Empty);
+}
+
+message MonocleModeCycleRequest {
+  CycleDir cycle_direction = 1;
+}
+
+enum CycleDir {
+  CYCLE_DIR_INVALID = 0;
+  CYCLE_DIR_PREV = 1;
+  CYCLE_DIR_NEXT = 2;
+}
+
