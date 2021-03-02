@@ -45,6 +45,7 @@ That's it!
 **Caution**: The `bspc node -k` command [will break this mode](https://github.com/diogox/bspm/issues/9).
 You can resume it simply by toggling it off and on again.
 To avoid this, you can replace that command in your `sxhkdrc` with one of the following:
+* `xdo kill`
 * `xdotool getwindowfocus windowkill`
 * `xkill -id $(xprop -root _NET_ACTIVE_WINDOW | cut -d\# -f2)` (Not pretty, I know)
 
@@ -60,3 +61,7 @@ super + j
 super + k
 	bspm monocle --next || bspc node -f north
 ```
+
+---
+
+*A special thanks to [ortango](https://github.com/ortango) for his contributions in perfecting `bspm`.*
