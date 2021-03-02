@@ -3,7 +3,7 @@ module github.com/diogox/bspm
 go 1.16
 
 require (
-	github.com/diogox/bspc-go v0.0.0-20210223003857-a374b109650b
+	github.com/diogox/bspc-go v0.0.0-20210302164947-8846a31c3273
 	github.com/fatih/color v1.10.0
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3

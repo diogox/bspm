@@ -11,6 +11,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/diogox/bspc-go v0.0.0-20210223003857-a374b109650b h1:Z61d3aWQYD7DyngMzW/tc8rjNlx3Eql8i6G7isWEUCY=
 github.com/diogox/bspc-go v0.0.0-20210223003857-a374b109650b/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
+github.com/diogox/bspc-go v0.0.0-20210302164947-8846a31c3273 h1:xMT4BtYMMDaMg5y58BrondplTEia5nokyTAYH6Hul9Q=
+github.com/diogox/bspc-go v0.0.0-20210302164947-8846a31c3273/go.mod h1:d4jYBJhdGS8dxKhiT6+AMbjjUE3jIr3+SfG190UUMKk=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.9-0.20201210154907-fd9021fe5dad/go.mod h1:cXg6YxExXjJnVBQHBLXeUAgxn2UodCpnH306RInaBQk=
