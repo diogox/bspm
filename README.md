@@ -66,13 +66,37 @@ You'll need to have the necessary dependencies installed for whatever command yo
 
 ---
 
-**Here's a tip**: To be able to use `j` and `k` to cycle between nodes in this mode and still be able to use those keys 
+**A few tips:**: 
+
+* To be able to use `j` and `k` to cycle between nodes in this mode and still be able to use those keys 
 in `tiled` mode, you can use the following snippet in your `sxhkdrc`:
 ```
 super + j
 	bspm monocle --prev || bspc node -f south
 super + k
 	bspm monocle --next || bspc node -f north
+```
+
+* To get an indicator in Polybar for whether or not transparent monocle mode is activated in the currently focused desktop, 
+ and how many nodes are in it, use a script like this one:
+```sh
+#!/bin/bash
+
+bspm monocle --subscribe-node-count | while read -r n_nodes; do
+	if [[ $n_nodes == "-1" ]]
+	then 
+		echo " " 
+	else 
+		echo "M[$n_nodes]"
+	fi
+done 
+```
+And then have a Polybar module like: (and enable it for your bar)
+```
+[module/bspm-monocle]
+type = custom/script
+exec = path_to_script.sh
+tail = true
 ```
 
 ---
