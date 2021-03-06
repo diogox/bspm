@@ -133,24 +133,14 @@ func Start(
 			zap.Uint("destination_node_id", uint(payload.DestinationNodeID)),
 		}
 
-		isSourceDesktopMonocled := true
-		if _, err := desktops.Get(payload.SourceDesktopID); err != nil {
-			if !errors.Is(err, state.ErrNotFound) {
-				logger.Error("failed to get source desktop state", append(loggerOpts, zap.Error(err))...)
-				return err
-			}
-
-			isSourceDesktopMonocled = false
+		var isSourceDesktopMonocled bool
+		if _, ok := desktops.Get(payload.SourceDesktopID); ok {
+			isSourceDesktopMonocled = true
 		}
 
-		isDestinationDesktopMonocled := true
-		if _, err := desktops.Get(payload.DestinationDesktopID); err != nil {
-			if !errors.Is(err, state.ErrNotFound) {
-				logger.Error("failed to get destination desktop state", append(loggerOpts, zap.Error(err))...)
-				return err
-			}
-
-			isDestinationDesktopMonocled = false
+		var isDestinationDesktopMonocled bool
+		if _, ok := desktops.Get(payload.DestinationDesktopID); ok {
+			isDestinationDesktopMonocled = true
 		}
 
 		if !isSourceDesktopMonocled && !isDestinationDesktopMonocled {
@@ -292,12 +282,8 @@ func handleNodeRemoved(
 	desktopID bspc.ID,
 	nodeID bspc.ID,
 ) error {
-	st, err := desktops.Get(desktopID)
-	if err != nil {
-		if !errors.Is(err, state.ErrNotFound) {
-			return fmt.Errorf("failed to get desktop state: %w", err)
-		}
-
+	st, ok := desktops.Get(desktopID)
+	if !ok {
 		return nil
 	}
 
@@ -377,12 +363,8 @@ func handleNodeAdded(
 		return nil
 	}
 
-	st, err := desktops.Get(desktopID)
-	if err != nil {
-		if !errors.Is(err, state.ErrNotFound) {
-			return fmt.Errorf("failed to get desktop state: %w", err)
-		}
-
+	st, ok := desktops.Get(desktopID)
+	if !ok {
 		return nil
 	}
 
@@ -409,15 +391,12 @@ func (tm transparentMonocle) ToggleCurrentDesktop() error {
 		return fmt.Errorf("failed to get current desktop: %w", err)
 	}
 
-	st, err := tm.desktops.Delete(desktop.ID)
-	if err != nil {
-		if !errors.Is(err, state.ErrNotFound) {
-			return fmt.Errorf("failed to retrieve and delete state: %v", err)
-		}
-
+	st, ok := tm.desktops.Get(desktop.ID)
+	if !ok {
 		return tm.enableMode(desktop)
 	}
 
+	tm.desktops.Delete(desktop.ID)
 	return tm.disableMode(st)
 }
 
@@ -494,13 +473,9 @@ func (tm transparentMonocle) FocusPreviousHiddenNode() error {
 		return fmt.Errorf("failed to get current desktop state: %v", err)
 	}
 
-	st, err := tm.desktops.Get(desktop.ID)
-	if err != nil {
-		if errors.Is(err, state.ErrNotFound) {
-			return ErrFeatureNotEnabled
-		}
-
-		return fmt.Errorf("failed to get desktop state: %v", err)
+	st, ok := tm.desktops.Get(desktop.ID)
+	if !ok {
+		return ErrFeatureNotEnabled
 	}
 
 	if st.SelectedNodeID == nil || len(st.HiddenNodeIDs) == 0 {
@@ -531,13 +506,9 @@ func (tm transparentMonocle) FocusNextHiddenNode() error {
 		return fmt.Errorf("failed to get current desktop state: %v", err)
 	}
 
-	st, err := tm.desktops.Get(desktop.ID)
-	if err != nil {
-		if errors.Is(err, state.ErrNotFound) {
-			return ErrFeatureNotEnabled
-		}
-
-		return fmt.Errorf("failed to get desktop state: %v", err)
+	st, ok := tm.desktops.Get(desktop.ID)
+	if !ok {
+		return ErrFeatureNotEnabled
 	}
 
 	if st.SelectedNodeID == nil || len(st.HiddenNodeIDs) == 0 {

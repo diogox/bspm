@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+
+	"github.com/diogox/bspm/internal/subscription"
+
 	"github.com/fatih/color"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/urfave/cli/v2"
@@ -28,6 +31,8 @@ type app struct {
 }
 
 func New(logger *zap.Logger, version string) app {
+	subscriptionManager := subscription.NewManager()
+
 	return app{
 		cli: &cli.App{
 			Name:    "bspm",
@@ -123,7 +128,7 @@ func New(logger *zap.Logger, version string) app {
 						return fmt.Errorf("failed to initialize logger: %v", err)
 					}
 
-					return runDaemon(l)
+					return runDaemon(l, subscriptionManager)
 				}
 
 				return errors.New("invalid arguments")

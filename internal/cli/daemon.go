@@ -17,9 +17,10 @@ import (
 	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
 	"github.com/diogox/bspm/internal/grpc"
 	"github.com/diogox/bspm/internal/log"
+	"github.com/diogox/bspm/internal/subscription"
 )
 
-func runDaemon(logger *log.Logger) error {
+func runDaemon(logger *log.Logger, subscriptionManager subscription.Manager) error {
 	bspwmClient, err := bspc.New(logger.WithoutFields())
 	if err != nil {
 		return fmt.Errorf("failed to initialise bspwm client: %v", err)
@@ -27,7 +28,7 @@ func runDaemon(logger *log.Logger) error {
 
 	monocle, cancel, err := transparentmonocle.Start(
 		logger,
-		state.NewTransparentMonocle(),
+		state.NewTransparentMonocle(subscriptionManager),
 		bspwm.NewService(
 			bspwmClient,
 			bspwmdesktop.NewService(bspwmClient),
