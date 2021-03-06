@@ -3,8 +3,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
-
 
 	"github.com/diogox/bspm/internal/subscription"
 
@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	flagKeyDaemon        = "daemon"
-	flagKeyVerbose       = "verbose"
-	flagKeyMonocleToggle = "toggle"
-	flagKeyMonocleNext   = "next"
-	flagKeyMonoclePrev   = "prev"
+	flagKeyDaemon                    = "daemon"
+	flagKeyVerbose                   = "verbose"
+	flagKeyMonocleToggle             = "toggle"
+	flagKeyMonocleNext               = "next"
+	flagKeyMonoclePrev               = "prev"
+	flagKeyMonocleSubscribeNodeCount = "subscribe-node-count"
 )
 
 type app struct {
@@ -70,6 +71,10 @@ func New(logger *zap.Logger, version string) app {
 							Name:  flagKeyMonoclePrev,
 							Usage: "Shows the previous node in the transparent monocle workflow",
 						},
+						&cli.BoolFlag{
+							Name:  flagKeyMonocleSubscribeNodeCount,
+							Usage: "Returns the number of nodes in the transparent monocle workflow, every time it changes",
+						},
 					},
 					Action: func(ctx *cli.Context) error {
 						c, err := grpc.NewClient()
@@ -82,14 +87,15 @@ func New(logger *zap.Logger, version string) app {
 						}
 
 						var (
-							isToggle = ctx.Bool(flagKeyMonocleToggle)
-							isNext   = ctx.Bool(flagKeyMonocleNext)
-							isPrev   = ctx.Bool(flagKeyMonoclePrev)
+							isToggle             = ctx.Bool(flagKeyMonocleToggle)
+							isNext               = ctx.Bool(flagKeyMonocleNext)
+							isPrev               = ctx.Bool(flagKeyMonoclePrev)
+							isSubscribeNodeCount = ctx.Bool(flagKeyMonocleSubscribeNodeCount)
 						)
 
 						switch {
 						case isToggle:
-							if _, err := c.ToggleMonocleMode(ctx.Context, &empty.Empty{}); err != nil {
+							if _, err := c.MonocleModeToggle(ctx.Context, &empty.Empty{}); err != nil {
 								return fmt.Errorf("failed to toggle monocle mode: %w", err)
 							}
 						case isPrev:
@@ -107,6 +113,29 @@ func New(logger *zap.Logger, version string) app {
 
 							if _, err := c.MonocleModeCycle(ctx.Context, req); err != nil {
 								return fmt.Errorf("failed to cycle to next node in monocle mode: %w", err)
+							}
+						case isSubscribeNodeCount:
+							req := &bspm.MonocleModeSubscribeRequest{
+								Type: bspm.MonocleModeSubscriptionType_MONOCLE_MODE_SUBSCRIPTION_TYPE_NODE_COUNT,
+							}
+
+							subscription, err := c.MonocleModeSubscribe(ctx.Context, req)
+							if err != nil {
+								return fmt.Errorf("failed to subscribe to node count in monocle mode: %w", err)
+							}
+
+							// TODO: Graceful shutdown
+							for {
+								msg, err := subscription.Recv()
+								if err != nil {
+									if errors.Is(err, io.EOF) {
+										return nil
+									}
+
+									return fmt.Errorf("failed to receive message from monocle mode node count subscription: %w", err)
+								}
+
+								fmt.Println(msg.GetNodeCount())
 							}
 						default:
 							return errors.New("unexpected error")

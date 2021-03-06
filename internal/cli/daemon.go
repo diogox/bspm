@@ -35,6 +35,7 @@ func runDaemon(logger *log.Logger, subscriptionManager subscription.Manager) err
 			bspwmnode.NewService(bspwmClient),
 			bspwmevent.NewManager(logger, bspwmClient),
 		),
+		subscriptionManager,
 	)
 	if err != nil {
 		return err

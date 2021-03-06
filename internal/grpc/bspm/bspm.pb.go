@@ -30,6 +30,52 @@ const (
 // of the legacy proto package is being used.
 const _ = proto.ProtoPackageIsVersion4
 
+type MonocleModeSubscriptionType int32
+
+const (
+	MonocleModeSubscriptionType_MONOCLE_MODE_SUBSCRIPTION_TYPE_INVALID    MonocleModeSubscriptionType = 0
+	MonocleModeSubscriptionType_MONOCLE_MODE_SUBSCRIPTION_TYPE_NODE_COUNT MonocleModeSubscriptionType = 1
+)
+
+// Enum value maps for MonocleModeSubscriptionType.
+var (
+	MonocleModeSubscriptionType_name = map[int32]string{
+		0: "MONOCLE_MODE_SUBSCRIPTION_TYPE_INVALID",
+		1: "MONOCLE_MODE_SUBSCRIPTION_TYPE_NODE_COUNT",
+	}
+	MonocleModeSubscriptionType_value = map[string]int32{
+		"MONOCLE_MODE_SUBSCRIPTION_TYPE_INVALID":    0,
+		"MONOCLE_MODE_SUBSCRIPTION_TYPE_NODE_COUNT": 1,
+	}
+)
+
+func (x MonocleModeSubscriptionType) Enum() *MonocleModeSubscriptionType {
+	p := new(MonocleModeSubscriptionType)
+	*p = x
+	return p
+}
+
+func (x MonocleModeSubscriptionType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MonocleModeSubscriptionType) Descriptor() protoreflect.EnumDescriptor {
+	return file_bspm_proto_enumTypes[0].Descriptor()
+}
+
+func (MonocleModeSubscriptionType) Type() protoreflect.EnumType {
+	return &file_bspm_proto_enumTypes[0]
+}
+
+func (x MonocleModeSubscriptionType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MonocleModeSubscriptionType.Descriptor instead.
+func (MonocleModeSubscriptionType) EnumDescriptor() ([]byte, []int) {
+	return file_bspm_proto_rawDescGZIP(), []int{0}
+}
+
 type CycleDir int32
 
 const (
@@ -63,11 +109,11 @@ func (x CycleDir) String() string {
 }
 
 func (CycleDir) Descriptor() protoreflect.EnumDescriptor {
-	return file_bspm_proto_enumTypes[0].Descriptor()
+	return file_bspm_proto_enumTypes[1].Descriptor()
 }
 
 func (CycleDir) Type() protoreflect.EnumType {
-	return &file_bspm_proto_enumTypes[0]
+	return &file_bspm_proto_enumTypes[1]
 }
 
 func (x CycleDir) Number() protoreflect.EnumNumber {
@@ -76,7 +122,7 @@ func (x CycleDir) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CycleDir.Descriptor instead.
 func (CycleDir) EnumDescriptor() ([]byte, []int) {
-	return file_bspm_proto_rawDescGZIP(), []int{0}
+	return file_bspm_proto_rawDescGZIP(), []int{1}
 }
 
 type MonocleModeCycleRequest struct {
@@ -126,6 +172,119 @@ func (x *MonocleModeCycleRequest) GetCycleDirection() CycleDir {
 	return CycleDir_CYCLE_DIR_INVALID
 }
 
+type MonocleModeSubscribeRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Type MonocleModeSubscriptionType `protobuf:"varint,1,opt,name=type,proto3,enum=ipc.MonocleModeSubscriptionType" json:"type,omitempty"`
+}
+
+func (x *MonocleModeSubscribeRequest) Reset() {
+	*x = MonocleModeSubscribeRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_bspm_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MonocleModeSubscribeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MonocleModeSubscribeRequest) ProtoMessage() {}
+
+func (x *MonocleModeSubscribeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_bspm_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MonocleModeSubscribeRequest.ProtoReflect.Descriptor instead.
+func (*MonocleModeSubscribeRequest) Descriptor() ([]byte, []int) {
+	return file_bspm_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *MonocleModeSubscribeRequest) GetType() MonocleModeSubscriptionType {
+	if x != nil {
+		return x.Type
+	}
+	return MonocleModeSubscriptionType_MONOCLE_MODE_SUBSCRIPTION_TYPE_INVALID
+}
+
+type MonocleModeSubscribeResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to SubscriptionType:
+	//	*MonocleModeSubscribeResponse_NodeCount
+	SubscriptionType isMonocleModeSubscribeResponse_SubscriptionType `protobuf_oneof:"subscription_type"`
+}
+
+func (x *MonocleModeSubscribeResponse) Reset() {
+	*x = MonocleModeSubscribeResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_bspm_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MonocleModeSubscribeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MonocleModeSubscribeResponse) ProtoMessage() {}
+
+func (x *MonocleModeSubscribeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_bspm_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MonocleModeSubscribeResponse.ProtoReflect.Descriptor instead.
+func (*MonocleModeSubscribeResponse) Descriptor() ([]byte, []int) {
+	return file_bspm_proto_rawDescGZIP(), []int{2}
+}
+
+func (m *MonocleModeSubscribeResponse) GetSubscriptionType() isMonocleModeSubscribeResponse_SubscriptionType {
+	if m != nil {
+		return m.SubscriptionType
+	}
+	return nil
+}
+
+func (x *MonocleModeSubscribeResponse) GetNodeCount() int32 {
+	if x, ok := x.GetSubscriptionType().(*MonocleModeSubscribeResponse_NodeCount); ok {
+		return x.NodeCount
+	}
+	return 0
+}
+
+type isMonocleModeSubscribeResponse_SubscriptionType interface {
+	isMonocleModeSubscribeResponse_SubscriptionType()
+}
+
+type MonocleModeSubscribeResponse_NodeCount struct {
+	NodeCount int32 `protobuf:"varint,1,opt,name=node_count,json=nodeCount,proto3,oneof"`
+}
+
+func (*MonocleModeSubscribeResponse_NodeCount) isMonocleModeSubscribeResponse_SubscriptionType() {}
+
 var File_bspm_proto protoreflect.FileDescriptor
 
 var file_bspm_proto_rawDesc = []byte{
@@ -137,22 +296,46 @@ var file_bspm_proto_rawDesc = []byte{
 	0x6c, 0x65, 0x5f, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0e, 0x32, 0x0d, 0x2e, 0x69, 0x70, 0x63, 0x2e, 0x43, 0x79, 0x63, 0x6c, 0x65, 0x44, 0x69,
 	0x72, 0x52, 0x0e, 0x63, 0x79, 0x63, 0x6c, 0x65, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x2a, 0x49, 0x0a, 0x08, 0x43, 0x79, 0x63, 0x6c, 0x65, 0x44, 0x69, 0x72, 0x12, 0x15, 0x0a,
-	0x11, 0x43, 0x59, 0x43, 0x4c, 0x45, 0x5f, 0x44, 0x49, 0x52, 0x5f, 0x49, 0x4e, 0x56, 0x41, 0x4c,
-	0x49, 0x44, 0x10, 0x00, 0x12, 0x12, 0x0a, 0x0e, 0x43, 0x59, 0x43, 0x4c, 0x45, 0x5f, 0x44, 0x49,
-	0x52, 0x5f, 0x50, 0x52, 0x45, 0x56, 0x10, 0x01, 0x12, 0x12, 0x0a, 0x0e, 0x43, 0x59, 0x43, 0x4c,
-	0x45, 0x5f, 0x44, 0x49, 0x52, 0x5f, 0x4e, 0x45, 0x58, 0x54, 0x10, 0x02, 0x32, 0x95, 0x01, 0x0a,
-	0x04, 0x42, 0x53, 0x50, 0x4d, 0x12, 0x43, 0x0a, 0x11, 0x54, 0x6f, 0x67, 0x67, 0x6c, 0x65, 0x4d,
-	0x6f, 0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
-	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70,
-	0x74, 0x79, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x12, 0x48, 0x0a, 0x10, 0x4d, 0x6f,
-	0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x43, 0x79, 0x63, 0x6c, 0x65, 0x12, 0x1c,
+	0x6e, 0x22, 0x53, 0x0a, 0x1b, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65,
+	0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x34, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x20,
 	0x2e, 0x69, 0x70, 0x63, 0x2e, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65,
-	0x43, 0x79, 0x63, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67,
-	0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45,
-	0x6d, 0x70, 0x74, 0x79, 0x42, 0x08, 0x5a, 0x06, 0x2e, 0x3b, 0x62, 0x73, 0x70, 0x6d, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65,
+	0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x54, 0x0a, 0x1c, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c,
+	0x65, 0x4d, 0x6f, 0x64, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1f, 0x0a, 0x0a, 0x6e, 0x6f, 0x64, 0x65, 0x5f, 0x63,
+	0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x48, 0x00, 0x52, 0x09, 0x6e, 0x6f,
+	0x64, 0x65, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x42, 0x13, 0x0a, 0x11, 0x73, 0x75, 0x62, 0x73, 0x63,
+	0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x2a, 0x78, 0x0a, 0x1b,
+	0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63,
+	0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x2a, 0x0a, 0x26, 0x4d,
+	0x4f, 0x4e, 0x4f, 0x43, 0x4c, 0x45, 0x5f, 0x4d, 0x4f, 0x44, 0x45, 0x5f, 0x53, 0x55, 0x42, 0x53,
+	0x43, 0x52, 0x49, 0x50, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x49, 0x4e,
+	0x56, 0x41, 0x4c, 0x49, 0x44, 0x10, 0x00, 0x12, 0x2d, 0x0a, 0x29, 0x4d, 0x4f, 0x4e, 0x4f, 0x43,
+	0x4c, 0x45, 0x5f, 0x4d, 0x4f, 0x44, 0x45, 0x5f, 0x53, 0x55, 0x42, 0x53, 0x43, 0x52, 0x49, 0x50,
+	0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x4e, 0x4f, 0x44, 0x45, 0x5f, 0x43,
+	0x4f, 0x55, 0x4e, 0x54, 0x10, 0x01, 0x2a, 0x49, 0x0a, 0x08, 0x43, 0x79, 0x63, 0x6c, 0x65, 0x44,
+	0x69, 0x72, 0x12, 0x15, 0x0a, 0x11, 0x43, 0x59, 0x43, 0x4c, 0x45, 0x5f, 0x44, 0x49, 0x52, 0x5f,
+	0x49, 0x4e, 0x56, 0x41, 0x4c, 0x49, 0x44, 0x10, 0x00, 0x12, 0x12, 0x0a, 0x0e, 0x43, 0x59, 0x43,
+	0x4c, 0x45, 0x5f, 0x44, 0x49, 0x52, 0x5f, 0x50, 0x52, 0x45, 0x56, 0x10, 0x01, 0x12, 0x12, 0x0a,
+	0x0e, 0x43, 0x59, 0x43, 0x4c, 0x45, 0x5f, 0x44, 0x49, 0x52, 0x5f, 0x4e, 0x45, 0x58, 0x54, 0x10,
+	0x02, 0x32, 0xf4, 0x01, 0x0a, 0x04, 0x42, 0x53, 0x50, 0x4d, 0x12, 0x43, 0x0a, 0x11, 0x4d, 0x6f,
+	0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x54, 0x6f, 0x67, 0x67, 0x6c, 0x65, 0x12,
+	0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
+	0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x12,
+	0x48, 0x0a, 0x10, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x43, 0x79,
+	0x63, 0x6c, 0x65, 0x12, 0x1c, 0x2e, 0x69, 0x70, 0x63, 0x2e, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c,
+	0x65, 0x4d, 0x6f, 0x64, 0x65, 0x43, 0x79, 0x63, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x12, 0x5d, 0x0a, 0x14, 0x4d, 0x6f, 0x6e,
+	0x6f, 0x63, 0x6c, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62,
+	0x65, 0x12, 0x20, 0x2e, 0x69, 0x70, 0x63, 0x2e, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c, 0x65, 0x4d,
+	0x6f, 0x64, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x21, 0x2e, 0x69, 0x70, 0x63, 0x2e, 0x4d, 0x6f, 0x6e, 0x6f, 0x63, 0x6c,
+	0x65, 0x4d, 0x6f, 0x64, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x42, 0x08, 0x5a, 0x06, 0x2e, 0x3b, 0x62, 0x73,
+	0x70, 0x6d, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -167,24 +350,30 @@ func file_bspm_proto_rawDescGZIP() []byte {
 	return file_bspm_proto_rawDescData
 }
 
-var file_bspm_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_bspm_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_bspm_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_bspm_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_bspm_proto_goTypes = []interface{}{
-	(CycleDir)(0),                   // 0: ipc.CycleDir
-	(*MonocleModeCycleRequest)(nil), // 1: ipc.MonocleModeCycleRequest
-	(*empty.Empty)(nil),             // 2: google.protobuf.Empty
+	(MonocleModeSubscriptionType)(0),     // 0: ipc.MonocleModeSubscriptionType
+	(CycleDir)(0),                        // 1: ipc.CycleDir
+	(*MonocleModeCycleRequest)(nil),      // 2: ipc.MonocleModeCycleRequest
+	(*MonocleModeSubscribeRequest)(nil),  // 3: ipc.MonocleModeSubscribeRequest
+	(*MonocleModeSubscribeResponse)(nil), // 4: ipc.MonocleModeSubscribeResponse
+	(*empty.Empty)(nil),                  // 5: google.protobuf.Empty
 }
 var file_bspm_proto_depIdxs = []int32{
-	0, // 0: ipc.MonocleModeCycleRequest.cycle_direction:type_name -> ipc.CycleDir
-	2, // 1: ipc.BSPM.ToggleMonocleMode:input_type -> google.protobuf.Empty
-	1, // 2: ipc.BSPM.MonocleModeCycle:input_type -> ipc.MonocleModeCycleRequest
-	2, // 3: ipc.BSPM.ToggleMonocleMode:output_type -> google.protobuf.Empty
-	2, // 4: ipc.BSPM.MonocleModeCycle:output_type -> google.protobuf.Empty
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 0: ipc.MonocleModeCycleRequest.cycle_direction:type_name -> ipc.CycleDir
+	0, // 1: ipc.MonocleModeSubscribeRequest.type:type_name -> ipc.MonocleModeSubscriptionType
+	5, // 2: ipc.BSPM.MonocleModeToggle:input_type -> google.protobuf.Empty
+	2, // 3: ipc.BSPM.MonocleModeCycle:input_type -> ipc.MonocleModeCycleRequest
+	3, // 4: ipc.BSPM.MonocleModeSubscribe:input_type -> ipc.MonocleModeSubscribeRequest
+	5, // 5: ipc.BSPM.MonocleModeToggle:output_type -> google.protobuf.Empty
+	5, // 6: ipc.BSPM.MonocleModeCycle:output_type -> google.protobuf.Empty
+	4, // 7: ipc.BSPM.MonocleModeSubscribe:output_type -> ipc.MonocleModeSubscribeResponse
+	5, // [5:8] is the sub-list for method output_type
+	2, // [2:5] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_bspm_proto_init() }
@@ -205,14 +394,41 @@ func file_bspm_proto_init() {
 				return nil
 			}
 		}
+		file_bspm_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MonocleModeSubscribeRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_bspm_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MonocleModeSubscribeResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
+	file_bspm_proto_msgTypes[2].OneofWrappers = []interface{}{
+		(*MonocleModeSubscribeResponse_NodeCount)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_bspm_proto_rawDesc,
-			NumEnums:      1,
-			NumMessages:   1,
+			NumEnums:      2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -239,8 +455,9 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BSPMClient interface {
-	ToggleMonocleMode(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
+	MonocleModeToggle(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
 	MonocleModeCycle(ctx context.Context, in *MonocleModeCycleRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	MonocleModeSubscribe(ctx context.Context, in *MonocleModeSubscribeRequest, opts ...grpc.CallOption) (BSPM_MonocleModeSubscribeClient, error)
 }
 
 type bSPMClient struct {
@@ -251,9 +468,9 @@ func NewBSPMClient(cc grpc.ClientConnInterface) BSPMClient {
 	return &bSPMClient{cc}
 }
 
-func (c *bSPMClient) ToggleMonocleMode(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (c *bSPMClient) MonocleModeToggle(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ipc.BSPM/ToggleMonocleMode", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ipc.BSPM/MonocleModeToggle", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -269,41 +486,77 @@ func (c *bSPMClient) MonocleModeCycle(ctx context.Context, in *MonocleModeCycleR
 	return out, nil
 }
 
+func (c *bSPMClient) MonocleModeSubscribe(ctx context.Context, in *MonocleModeSubscribeRequest, opts ...grpc.CallOption) (BSPM_MonocleModeSubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_BSPM_serviceDesc.Streams[0], "/ipc.BSPM/MonocleModeSubscribe", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &bSPMMonocleModeSubscribeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type BSPM_MonocleModeSubscribeClient interface {
+	Recv() (*MonocleModeSubscribeResponse, error)
+	grpc.ClientStream
+}
+
+type bSPMMonocleModeSubscribeClient struct {
+	grpc.ClientStream
+}
+
+func (x *bSPMMonocleModeSubscribeClient) Recv() (*MonocleModeSubscribeResponse, error) {
+	m := new(MonocleModeSubscribeResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // BSPMServer is the server API for BSPM service.
 type BSPMServer interface {
-	ToggleMonocleMode(context.Context, *empty.Empty) (*empty.Empty, error)
+	MonocleModeToggle(context.Context, *empty.Empty) (*empty.Empty, error)
 	MonocleModeCycle(context.Context, *MonocleModeCycleRequest) (*empty.Empty, error)
+	MonocleModeSubscribe(*MonocleModeSubscribeRequest, BSPM_MonocleModeSubscribeServer) error
 }
 
 // UnimplementedBSPMServer can be embedded to have forward compatible implementations.
 type UnimplementedBSPMServer struct {
 }
 
-func (*UnimplementedBSPMServer) ToggleMonocleMode(context.Context, *empty.Empty) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ToggleMonocleMode not implemented")
+func (*UnimplementedBSPMServer) MonocleModeToggle(context.Context, *empty.Empty) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MonocleModeToggle not implemented")
 }
 func (*UnimplementedBSPMServer) MonocleModeCycle(context.Context, *MonocleModeCycleRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MonocleModeCycle not implemented")
+}
+func (*UnimplementedBSPMServer) MonocleModeSubscribe(*MonocleModeSubscribeRequest, BSPM_MonocleModeSubscribeServer) error {
+	return status.Errorf(codes.Unimplemented, "method MonocleModeSubscribe not implemented")
 }
 
 func RegisterBSPMServer(s *grpc.Server, srv BSPMServer) {
 	s.RegisterService(&_BSPM_serviceDesc, srv)
 }
 
-func _BSPM_ToggleMonocleMode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BSPM_MonocleModeToggle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BSPMServer).ToggleMonocleMode(ctx, in)
+		return srv.(BSPMServer).MonocleModeToggle(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ipc.BSPM/ToggleMonocleMode",
+		FullMethod: "/ipc.BSPM/MonocleModeToggle",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BSPMServer).ToggleMonocleMode(ctx, req.(*empty.Empty))
+		return srv.(BSPMServer).MonocleModeToggle(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -326,19 +579,46 @@ func _BSPM_MonocleModeCycle_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BSPM_MonocleModeSubscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(MonocleModeSubscribeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(BSPMServer).MonocleModeSubscribe(m, &bSPMMonocleModeSubscribeServer{stream})
+}
+
+type BSPM_MonocleModeSubscribeServer interface {
+	Send(*MonocleModeSubscribeResponse) error
+	grpc.ServerStream
+}
+
+type bSPMMonocleModeSubscribeServer struct {
+	grpc.ServerStream
+}
+
+func (x *bSPMMonocleModeSubscribeServer) Send(m *MonocleModeSubscribeResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 var _BSPM_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ipc.BSPM",
 	HandlerType: (*BSPMServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ToggleMonocleMode",
-			Handler:    _BSPM_ToggleMonocleMode_Handler,
+			MethodName: "MonocleModeToggle",
+			Handler:    _BSPM_MonocleModeToggle_Handler,
 		},
 		{
 			MethodName: "MonocleModeCycle",
 			Handler:    _BSPM_MonocleModeCycle_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "MonocleModeSubscribe",
+			Handler:       _BSPM_MonocleModeSubscribe_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "bspm.proto",
 }

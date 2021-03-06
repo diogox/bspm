@@ -23,6 +23,7 @@ bspm -d &
 
 All commands are prefixed with the subcommand `monocle`.
 
+#### Actions
 Toggle this mode for the desktop you're currently on:
 ```shell
 bspm monocle --toggle
@@ -37,6 +38,18 @@ Cycle to the previous node:
 ```shell
 bspm monocle --prev
 ```
+
+#### Subscriptions
+Subscriptions are useful to create interactions with bspm's state.
+
+You can, for example, setup your status bar to show an icon when monocle mode is active, and how many nodes are open.
+
+Subscribe to number of nodes in the current desktop's monocle mode (number also updates as desktop focus changes):
+```shell
+bspm monocle --subscribe-node-count
+```
+*This will return `-1` if monocle mode is disabled. 
+Bear in mind that a desktop in monocle mode can still have `0` nodes.*
 
 That's it!
 

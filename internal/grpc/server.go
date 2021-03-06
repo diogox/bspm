@@ -49,7 +49,7 @@ type server struct {
 	monocleService transparentmonocle.Feature
 }
 
-func (s *server) ToggleMonocleMode(context.Context, *empty.Empty) (*empty.Empty, error) {
+func (s *server) MonocleModeToggle(context.Context, *empty.Empty) (*empty.Empty, error) {
 	s.logger.Info("Toggling transparent monocle mode")
 
 	if err := s.monocleService.ToggleCurrentDesktop(); err != nil {
@@ -75,4 +75,25 @@ func (s *server) MonocleModeCycle(_ context.Context, req *bspm.MonocleModeCycleR
 	}
 
 	return &empty.Empty{}, nil
+}
+
+func (s *server) MonocleModeSubscribe(req *bspm.MonocleModeSubscribeRequest, stream bspm.BSPM_MonocleModeSubscribeServer) error {
+	switch req.Type {
+	case bspm.MonocleModeSubscriptionType_MONOCLE_MODE_SUBSCRIPTION_TYPE_NODE_COUNT:
+		for newCount := range s.monocleService.SubscribeNodeCount() {
+			err := stream.Send(&bspm.MonocleModeSubscribeResponse{
+				SubscriptionType: &bspm.MonocleModeSubscribeResponse_NodeCount{
+					NodeCount: int32(newCount),
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed with to send subscription response: %w", err)
+			}
+		}
+
+	default:
+		return errors.New("invalid subscription type")
+	}
+
+	return nil
 }

@@ -3,21 +3,13 @@
 package state
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/diogox/bspc-go"
 
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/topic"
 	"github.com/diogox/bspm/internal/subscription"
 )
-
-const (
-	topicMonocleEnabled      subscription.Topic = "monocle_enabled"
-	topicMonocleDisabled     subscription.Topic = "monocle_disabled"
-	topicMonocleStateChanged subscription.Topic = "monocle_state_changed"
-)
-
-var ErrNotFound = errors.New("not found")
 
 type (
 	Manager interface {
@@ -60,12 +52,12 @@ func (m manager) Set(desktopID bspc.ID, st State) {
 
 	if _, ok := m.desktops[desktopID]; !ok {
 		m.desktops[desktopID] = st
-		m.subscriptions.Publish(topicMonocleEnabled, st)
+		m.subscriptions.Publish(topic.MonocleEnabled, st)
 		return
 	}
 
 	m.desktops[desktopID] = st
-	m.subscriptions.Publish(topicMonocleStateChanged, st)
+	m.subscriptions.Publish(topic.MonocleStateChanged, st)
 }
 
 func (m manager) Delete(desktopID bspc.ID) {
@@ -75,5 +67,5 @@ func (m manager) Delete(desktopID bspc.ID) {
 	prevState := m.desktops[desktopID]
 
 	delete(m.desktops, desktopID)
-	m.subscriptions.Publish(topicMonocleDisabled, prevState)
+	m.subscriptions.Publish(topic.MonocleDisabled, prevState)
 }

@@ -10,6 +10,9 @@ import (
 	"github.com/diogox/bspc-go"
 	"go.uber.org/zap"
 
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/topic"
+	"github.com/diogox/bspm/internal/subscription"
+
 	"github.com/diogox/bspm/internal/bspwm"
 	"github.com/diogox/bspm/internal/bspwm/filter"
 
@@ -22,12 +25,14 @@ type (
 		ToggleCurrentDesktop() error
 		FocusPreviousHiddenNode() error
 		FocusNextHiddenNode() error
+		SubscribeNodeCount() chan int
 	}
 
 	transparentMonocle struct {
-		logger   *log.Logger
-		service  bspwm.Service
-		desktops state.Manager
+		logger        *log.Logger
+		service       bspwm.Service
+		desktops      state.Manager
+		subscriptions subscription.Manager
 	}
 )
 
@@ -37,6 +42,7 @@ func Start(
 	logger *log.Logger,
 	desktops state.Manager,
 	service bspwm.Service,
+	subscriptions subscription.Manager,
 ) (Feature, func(), error) {
 	service.Events().On(bspc.EventTypeNodeAdd, func(eventPayload interface{}) error {
 		payload, ok := eventPayload.(bspc.EventNodeAdd)
@@ -263,15 +269,23 @@ func Start(
 		return nil
 	})
 
+	// TODO: I should extract these callback definitions to where they make the most sense.
+	// Needed to trigger subscriptions when changing monocle mode instances (between desktops).
+	service.Events().On(bspc.EventTypeDesktopFocus, func(eventPayload interface{}) error {
+		subscriptions.Publish(topic.MonocleDesktopFocusChanged, nil)
+		return nil
+	})
+
 	cancelFunc, err := service.Events().Start()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start event manager")
 	}
 
 	return &transparentMonocle{
-		logger:   logger,
-		service:  service,
-		desktops: desktops,
+		logger:        logger,
+		service:       service,
+		desktops:      desktops,
+		subscriptions: subscriptions,
 	}, cancelFunc, nil
 }
 
@@ -531,6 +545,65 @@ func (tm transparentMonocle) FocusNextHiddenNode() error {
 	})
 
 	return nil
+}
+
+func (tm transparentMonocle) SubscribeNodeCount() chan int {
+	var (
+		stateCh        = tm.subscriptions.Subscribe(topic.MonocleStateChanged)
+		enabledCh      = tm.subscriptions.Subscribe(topic.MonocleEnabled)
+		disabledCh     = tm.subscriptions.Subscribe(topic.MonocleDisabled)
+		desktopFocusCh = tm.subscriptions.Subscribe(topic.MonocleDesktopFocusChanged)
+	)
+
+	var (
+		countCh               = make(chan int, 1)
+		publishCountFromState = func(st state.State) {
+			count := len(st.HiddenNodeIDs)
+			if st.SelectedNodeID != nil {
+				count++
+			}
+
+			countCh <- count
+		}
+		getAndPublishCount = func() {
+			focusedDesktop, err := tm.service.Desktops().Get(filter.DesktopFocused)
+			if err == nil { // TODO: Log if there's an error?
+				currentState, ok := tm.desktops.Get(focusedDesktop.ID)
+				switch ok {
+				case true:
+					publishCountFromState(currentState)
+				case false:
+					// Mode is disabled
+					countCh <- -1
+				}
+			}
+		}
+	)
+
+	// Publish current number of nodes
+	getAndPublishCount()
+
+	go func() {
+		for {
+			select {
+			case payload := <-stateCh:
+				updatedState := payload.(state.State)
+				publishCountFromState(updatedState)
+
+			case payload := <-enabledCh:
+				updatedState := payload.(state.State)
+				publishCountFromState(updatedState)
+
+			case <-desktopFocusCh:
+				getAndPublishCount()
+
+			case <-disabledCh:
+				countCh <- -1
+			}
+		}
+	}()
+
+	return countCh
 }
 
 func removeFromSlice(slice []bspc.ID, toRemove bspc.ID) []bspc.ID {

@@ -14,6 +14,7 @@ import (
 	transparentmonocle "github.com/diogox/bspm/internal/feature/transparent_monocle"
 	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
 	"github.com/diogox/bspm/internal/log"
+	"github.com/diogox/bspm/internal/subscription"
 )
 
 // TODO: Finish testing the other methods.
@@ -24,15 +25,16 @@ func TestNewTransparentMonocle(t *testing.T) {
 		defer ctrl.Finish()
 
 		var (
-			mockEventManager = bspwmevent.NewMockManager(ctrl)
-			mockService      = bspwm.NewMockService(ctrl)
-			mockState        = state.NewMockManager(ctrl)
+			mockEventManager  = bspwmevent.NewMockManager(ctrl)
+			mockService       = bspwm.NewMockService(ctrl)
+			mockState         = state.NewMockManager(ctrl)
+			mockSubscriptions = subscription.NewMockManager(ctrl)
 		)
 
 		mockService.EXPECT().
 			Events().
 			Return(mockEventManager).
-			Times(5)
+			Times(6)
 		mockEventManager.EXPECT().
 			On(bspc.EventTypeNodeAdd, gomock.Any())
 		mockEventManager.EXPECT().
@@ -42,13 +44,15 @@ func TestNewTransparentMonocle(t *testing.T) {
 		mockEventManager.EXPECT().
 			On(bspc.EventTypeNodeSwap, gomock.Any())
 		mockEventManager.EXPECT().
+			On(bspc.EventTypeDesktopFocus, gomock.Any())
+		mockEventManager.EXPECT().
 			Start().
 			Return(nil, nil)
 
 		logger, err := log.New(zaptest.NewLogger(t), false)
 		require.NoError(t, err)
 
-		_, _, err = transparentmonocle.Start(logger, mockState, mockService)
+		_, _, err = transparentmonocle.Start(logger, mockState, mockService, mockSubscriptions)
 		assert.NoError(t, err)
 	})
 }

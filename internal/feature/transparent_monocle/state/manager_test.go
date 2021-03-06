@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/diogox/bspm/internal/feature/transparent_monocle/state"
+	"github.com/diogox/bspm/internal/feature/transparent_monocle/topic"
 	"github.com/diogox/bspm/internal/subscription"
 )
 
@@ -54,7 +55,7 @@ func TestTransparentMonocle_Set(t *testing.T) {
 			)
 
 			mockSubscriptions := subscription.NewMockManager(ctrl)
-			mockSubscriptions.EXPECT().Publish(state.ExportMonocleEnabled, st)
+			mockSubscriptions.EXPECT().Publish(topic.MonocleEnabled, st)
 
 			state.NewTransparentMonocle(mockSubscriptions).WithState(initial).Set(desktopID, st)
 
@@ -78,7 +79,7 @@ func TestTransparentMonocle_Set(t *testing.T) {
 			)
 
 			mockSubscriptions := subscription.NewMockManager(ctrl)
-			mockSubscriptions.EXPECT().Publish(state.ExportMonocleStateChanged, st)
+			mockSubscriptions.EXPECT().Publish(topic.MonocleStateChanged, st)
 
 			state.NewTransparentMonocle(mockSubscriptions).WithState(initial).Set(desktopID, st)
 
@@ -106,7 +107,7 @@ func TestTransparentMonocle_Delete(t *testing.T) {
 		)
 
 		mockSubscriptions := subscription.NewMockManager(ctrl)
-		mockSubscriptions.EXPECT().Publish(state.ExportMonocleDisabled, st)
+		mockSubscriptions.EXPECT().Publish(topic.MonocleDisabled, st)
 
 		state.NewTransparentMonocle(mockSubscriptions).WithState(initial).Delete(desktopID)
 	})
