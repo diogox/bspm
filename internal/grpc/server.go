@@ -1,3 +1,5 @@
+//go:generate mockgen -package grpc -destination bspm_proto_mock.go github.com/diogox/bspm/internal/grpc/bspm BSPM_MonocleModeSubscribeServer
+
 package grpc
 
 import (
@@ -6,7 +8,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/fatih/color"
 	"github.com/golang/protobuf/ptypes/empty"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -25,8 +26,10 @@ func NewServer(logger *log.Logger, monocleService transparentmonocle.Feature) (f
 		monocleService: monocleService,
 	})
 
-	start := func() error { return startServer(s) }
-	stop := func() { s.GracefulStop() }
+	var (
+		start = func() error { return startServer(s) }
+		stop  = func() { s.GracefulStop() }
+	)
 
 	return start, stop
 }
@@ -53,8 +56,8 @@ func (s *server) MonocleModeToggle(context.Context, *empty.Empty) (*empty.Empty,
 	s.logger.Info("Toggling transparent monocle mode")
 
 	if err := s.monocleService.ToggleCurrentDesktop(); err != nil {
-		color.Red("Failed to toggle transparent monocle mode")
 		s.logger.Error("failed to toggle transparent monocle mode", zap.Error(err))
+		return &empty.Empty{}, fmt.Errorf("failed to toggle transparent monocle mode: %w", err)
 	}
 
 	return &empty.Empty{}, nil
