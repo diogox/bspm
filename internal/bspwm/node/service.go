@@ -1,4 +1,5 @@
 //go:generate mockgen -package bspwmnode -destination ./service_mock.go -self_package github.com/diogox/bspm/internal/bspwm/node github.com/diogox/bspm/internal/bspwm/node Service
+//go:generate mockgen -package bspwmnode -destination ./bspc_mock.go github.com/diogox/bspc-go Client
 
 package bspwmnode
 
