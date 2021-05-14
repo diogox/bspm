@@ -34,7 +34,7 @@ func TestNewTransparentMonocle(t *testing.T) {
 		mockService.EXPECT().
 			Events().
 			Return(mockEventManager).
-			Times(6)
+			Times(7)
 		mockEventManager.EXPECT().
 			On(bspc.EventTypeNodeAdd, gomock.Any())
 		mockEventManager.EXPECT().
@@ -45,6 +45,8 @@ func TestNewTransparentMonocle(t *testing.T) {
 			On(bspc.EventTypeNodeSwap, gomock.Any())
 		mockEventManager.EXPECT().
 			On(bspc.EventTypeDesktopFocus, gomock.Any())
+		mockEventManager.EXPECT().
+			On(bspc.EventTypeNodeState, gomock.Any())
 		mockEventManager.EXPECT().
 			Start().
 			Return(nil, nil)

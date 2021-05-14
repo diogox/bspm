@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ipc;
 
-option go_package = ".;bspm";
+option go_package = "./;bspm";
 
 import "google/protobuf/empty.proto";
 

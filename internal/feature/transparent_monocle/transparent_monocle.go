@@ -276,6 +276,48 @@ func Start(
 		return nil
 	})
 
+	service.Events().On(bspc.EventTypeNodeState, func(eventPayload interface{}) error {
+		payload, ok := eventPayload.(bspc.EventNodeState)
+		if !ok {
+			return errors.New("invalid event payload")
+		}
+
+		if payload.State != bspc.StateTypeFloating {
+			// Ignore state change
+			return nil
+		}
+
+		if _, ok := desktops.Get(payload.DesktopID); !ok {
+			return nil
+		}
+
+		switch payload.WasEnabled {
+		case true:
+			err := handleNodeRemoved(logger, service, desktops, payload.DesktopID, payload.NodeID)
+			if err != nil {
+				logger.Error("failed to handle removing floating node",
+					zap.Uint("desktop_id", uint(payload.DesktopID)),
+					zap.Error(err),
+				)
+
+				return err
+			}
+
+		case false:
+			err := handleNodeAdded(logger, service, desktops, payload.DesktopID, payload.NodeID)
+			if err != nil {
+				logger.Error("failed to handle adding un-floated node",
+					zap.Uint("desktop_id", uint(payload.DesktopID)),
+					zap.Error(err),
+				)
+
+				return err
+			}
+		}
+
+		return nil
+	})
+
 	cancelFunc, err := service.Events().Start()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start event manager")
